@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/donbattery/snake-hub/cmd"
-	"github.com/donbattery/snake-hub/utils"
+	"github.com/mikloslorinczi/snake-hub/cmd"
+	"github.com/mikloslorinczi/snake-hub/utils"
 )
 
 func main() {

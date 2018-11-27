@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/donbattery/snake-hub/client"
+	"github.com/mikloslorinczi/snake-hub/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

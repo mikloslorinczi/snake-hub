@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/donbattery/snake-hub/server"
+	"github.com/mikloslorinczi/snake-hub/server"
 )
 
 // hostCmd represents the run command
