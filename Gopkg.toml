@@ -30,10 +30,6 @@
   version = "1.4.0"
 
 [[constraint]]
-  name = "github.com/mikloslorinczi/infra-exec"
-  version = "0.1.4"
-
-[[constraint]]
   branch = "master"
   name = "github.com/nsf/termbox-go"
 

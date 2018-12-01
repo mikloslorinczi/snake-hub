@@ -10,7 +10,7 @@ func reverse(s string) string {
 	return string(runes)
 }
 
-// NewID returns a reversed XID
+// NewID returns an unique 20 character long string
 func NewID() string {
 	return reverse(xid.New().String())
 }

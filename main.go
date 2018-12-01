@@ -23,11 +23,15 @@ func init() {
 		fmt.Printf("Cannot set configuration %v\n", err)
 	}
 
-	// Setup global flags
+	// Bind Cobra flags to Viper keys
 	cmd.RootCmd.PersistentFlags().StringP("secret", "s", "", "Snake-hub secret")
-
 	if err := viper.BindPFlag("SNAKE_SECRET", cmd.RootCmd.PersistentFlags().Lookup("secret")); err != nil {
-		fmt.Printf("Cannot bind flag SNAKE_SECRET %v\n", err)
+		fmt.Printf("Cannot bind flag 'secret' to SNAKE_SECRET %v\n", err)
+	}
+
+	cmd.RootCmd.PersistentFlags().BoolP("debug", "d", false, "Debug mode")
+	if err := viper.BindPFlag("SNAKE_DEBUG", cmd.RootCmd.PersistentFlags().Lookup("debug")); err != nil {
+		fmt.Printf("Cannot bind flag 'debug' to SNAKE_DEBUG %v\n", err)
 	}
 
 }

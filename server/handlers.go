@@ -1,50 +1,71 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/tidwall/gjson"
+
+	"github.com/mikloslorinczi/snake-hub/modell"
+
 	"github.com/gorilla/websocket"
-	"github.com/mikloslorinczi/infra-exec/common"
 )
 
 var upgrader = websocket.Upgrader{} // use default options
 
-func echo(w http.ResponseWriter, r *http.Request) {
+func game(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			fmt.Printf("Cannot close WebSocket properly %s\n", err)
+		}
+	}()
+
+wsLoop:
 	for {
 		mt, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
-			break
+			log.Printf("Read error: %s\n", err)
+			break wsLoop
 		}
-		log.Printf("recv: %s", message)
-		err = conn.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write:", err)
-			break
+		log.Printf("Message type: %d, Message: %s", mt, message)
+		result := gjson.GetBytes(message, "type").String()
+		switch {
+		case result == "handshake":
+			{
+				fmt.Println("Handshake")
+				resp := modell.ServerMsg{
+					Type: "handshake",
+					Data: "handshaker",
+				}
+				conn.WriteJSON(resp)
+			}
+		case result == "leave":
+			{
+				fmt.Println("User left...")
+				break wsLoop
+			}
+		default:
 		}
+		// err = conn.WriteMessage(mt, message)
+		// if err != nil {
+		// 	log.Println("write:", err)
+		// 	break
+		// }
+		// websocket.
+		// msg := modell.CommandObj{}
+		// if err := conn.ReadJSON(msg); err != nil {
+		// 	log.Printf("Cannot read message %v", err)
+		// 	break
 	}
+	fmt.Println("game loop broken..")
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
-}
-
-// custom404 handles all unhandlet request with a common Wrong way 404 message.
-func custom404() http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		res.WriteHeader(http.StatusNotFound)
-		encoder := json.NewEncoder(res)
-		if err := encoder.Encode(common.ResponseMsg{Msg: "Wrong way 404 🐸"}); err != nil {
-			fmt.Printf("Error encoding message %v", err)
-		}
-	})
+	homeTemplate.Execute(w, "ws://"+r.Host+"/game")
 }
