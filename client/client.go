@@ -14,20 +14,25 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
+	"github.com/mikloslorinczi/snake-hub/state"
 	"github.com/mikloslorinczi/snake-hub/utils"
 )
 
 var (
-	clientID      = utils.NewID()
-	conn          *websocket.Conn
-	connMutex     sync.RWMutex
-	connOpen      = false
-	termboxOpen   = false
+	clientID    = utils.NewID()
+	conn        *websocket.Conn
+	connMutex   sync.RWMutex
+	connOpen    = false
+	termboxOpen = false
+
 	exitChan      = make(chan struct{}, 1)
 	errorChan     = make(chan error, 10)
 	termChan      = make(chan string, 10)
 	serverMsgChan = make(chan modell.ServerMsg, 10)
 	clientMsgChan = make(chan modell.ClientMsg, 10)
+
+	gameState  state.State
+	stateMutex sync.RWMutex
 )
 
 // Run starts the Client...
@@ -66,6 +71,7 @@ func Run() {
 		stopEventLoop: exitChan,
 		stopRender:    exitChan,
 	}
+	tw.getSize()
 	go tw.startEventloop()
 	go tw.startRenderer()
 
@@ -92,8 +98,13 @@ mainLoop:
 }
 
 func getConn() error {
-	// Get the URL of Snake-hub server
-	u := url.URL{Scheme: "ws", Host: viper.GetString("SNAKE_URL"), Path: "/game"}
+	// Get the URL of Snake-hub server send client ID and Snake Secret as query string
+	u := url.URL{
+		Scheme:   "ws",
+		Host:     viper.GetString("SNAKE_URL"),
+		Path:     "/hub",
+		RawQuery: fmt.Sprintf("clientid=%s&snakesecret=%s", clientID, viper.Get("SNAKE_SECRET")),
+	}
 	wsURL := u.String()
 	fmt.Printf("Connecting to %v...\n", wsURL)
 

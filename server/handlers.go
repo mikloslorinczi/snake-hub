@@ -2,70 +2,68 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
-	"github.com/tidwall/gjson"
-
-	"github.com/mikloslorinczi/snake-hub/modell"
-
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
-var upgrader = websocket.Upgrader{} // use default options
+var upgrader = websocket.Upgrader{}
 
-func game(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+func hub(res http.ResponseWriter, req *http.Request) {
+
+	id, err := auth(req)
 	if err != nil {
-		log.Print("upgrade:", err)
+		res.WriteHeader(http.StatusUnauthorized)
+		res.Write([]byte("Unauthorized\n"))
 		return
 	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			fmt.Printf("Cannot close WebSocket properly %s\n", err)
-		}
-	}()
 
-wsLoop:
-	for {
-		mt, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Printf("Read error: %s\n", err)
-			break wsLoop
-		}
-		log.Printf("Message type: %d, Message: %s", mt, message)
-		result := gjson.GetBytes(message, "type").String()
-		switch {
-		case result == "handshake":
-			{
-				fmt.Println("Handshake")
-				resp := modell.ServerMsg{
-					Type: "handshake",
-					Data: "handshaker",
-				}
-				conn.WriteJSON(resp)
-			}
-		case result == "leave":
-			{
-				fmt.Println("User left...")
-				break wsLoop
-			}
-		default:
-		}
-		// err = conn.WriteMessage(mt, message)
-		// if err != nil {
-		// 	log.Println("write:", err)
-		// 	break
-		// }
-		// websocket.
-		// msg := modell.CommandObj{}
-		// if err := conn.ReadJSON(msg); err != nil {
-		// 	log.Printf("Cannot read message %v", err)
-		// 	break
+	conn, err := upgrader.Upgrade(res, req, nil)
+	if err != nil {
+		res.WriteHeader(http.StatusUpgradeRequired)
+		res.Write([]byte(fmt.Sprintf("Cannot upgrade HTTP connection to WebSocket %s\n", err)))
+		return
 	}
-	fmt.Println("game loop broken..")
+
+	newClient(id, conn)
+
+}
+
+func auth(req *http.Request) (string, error) {
+
+	query := req.URL.Query()
+	foundSecret := false
+	foundID := false
+	id := ""
+
+	for key, value := range query {
+		switch key {
+		case "snakesecret":
+			{
+				if len(value) == 1 && value[0] == viper.GetString("SNAKE_SECRET") {
+					foundSecret = true
+				}
+			}
+		case "clientid":
+			{
+				if len(value) == 1 {
+					foundID = true
+					id = value[0]
+				}
+			}
+		}
+	}
+
+	if foundID && foundSecret {
+		return id, nil
+	}
+
+	return id, errors.New("Secret or ID missing")
+
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/game")
+	homeTemplate.Execute(w, "")
 }

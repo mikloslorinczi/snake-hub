@@ -12,7 +12,7 @@ import (
 // Run starts the server...
 func Run() {
 
-	http.HandleFunc("/game", game)
+	http.HandleFunc("/hub", hub)
 
 	http.HandleFunc("/", home)
 
