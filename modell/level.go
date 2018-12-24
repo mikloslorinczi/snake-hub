@@ -12,19 +12,11 @@ type Coords struct {
 	Y int `json:"y"`
 }
 
-// Block represents a "pixel" in Termbox
-type Block struct {
-	Coord      Coords            `json:"coord"`
-	Color      termbox.Attribute `json:"color"`
-	Background termbox.Attribute `json:"background"`
-	LeftRune   rune              `json:"leftrune"`
-	RightRune  rune              `json:"rightrune"`
-}
-
 // LevelMap stores the width and height of the map
 type LevelMap struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
+	Width   int               `json:"width"`
+	Height  int               `json:"height"`
+	BgColor termbox.Attribute `json:"bgcolor"`
 }
 
 // GetCoords accepts x y as int and returns respective thorus coordinates

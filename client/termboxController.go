@@ -2,16 +2,16 @@ package client
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/nsf/termbox-go"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
 )
 
-type termboxWorker struct {
+type termboxController struct {
 	stopEventLoop chan struct{}
 	stopRender    chan struct{}
 	eventQueue    chan termbox.Event
@@ -19,21 +19,20 @@ type termboxWorker struct {
 	width         int
 }
 
-func (term *termboxWorker) startEventloop() {
+func (term *termboxController) startEventloop() {
 	term.eventQueue = make(chan termbox.Event)
 	go func() {
 		for {
 			term.eventQueue <- termbox.PollEvent()
 		}
 	}()
-	fmt.Println("Starting Termbox event reader")
+	log.Info("Starting Termbox event reader")
 	termbox.SetInputMode(termbox.InputEsc)
 	for {
 		select {
 		case ev := <-term.eventQueue:
 			switch ev.Type {
 			case termbox.EventKey:
-				fmt.Printf("Event key %U\n", ev.Key)
 				switch ev.Key {
 				case termbox.KeyEsc:
 					errorChan <- errors.New("Terminated by user")
@@ -60,7 +59,7 @@ func (term *termboxWorker) startEventloop() {
 }
 
 // Render draws the scene...
-func (term *termboxWorker) startRenderer() {
+func (term *termboxController) startRenderer() {
 	for {
 		select {
 
@@ -71,14 +70,16 @@ func (term *termboxWorker) startRenderer() {
 
 			nextTick := time.Now().Add(time.Millisecond * 30) // ~33.3 FPS
 
-			if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
-				errorChan <- err
-			}
+			if state.loaded {
+				if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
+					errorChan <- err
+				}
 
-			term.draw()
+				term.draw()
 
-			if err := termbox.Flush(); err != nil {
-				errorChan <- errors.Wrap(err, fmt.Sprintf("Cannot sync Termbox"))
+				if err := termbox.Flush(); err != nil {
+					errorChan <- errors.Wrap(err, fmt.Sprintf("Cannot sync Termbox"))
+				}
 			}
 
 			time.Sleep(time.Until(nextTick))
@@ -87,31 +88,40 @@ func (term *termboxWorker) startRenderer() {
 	}
 }
 
-func (term *termboxWorker) getSize() {
-	stateMutex.Lock()
-	defer stateMutex.Unlock()
+func (term *termboxController) getSize() {
 	term.width, term.height = termbox.Size()
 }
 
-func putBlock(b modell.Block) {
-	termbox.SetCell(b.Coord.X*2, b.Coord.Y, b.LeftRune, b.Color, b.Background)
-	termbox.SetCell(b.Coord.X*2+1, b.Coord.Y, b.RightRune, b.Color, b.Background)
+func putBlock(coords modell.Coords, color, bgColor termbox.Attribute, leftRune, rightRune rune) {
+	termbox.SetCell(coords.X*2, coords.Y, leftRune, color, bgColor)
+	termbox.SetCell(coords.X*2+1, coords.Y, rightRune, color, bgColor)
 }
 
-func (term *termboxWorker) draw() {
-
-	for y := 0; y < term.height; y++ {
-		for x := 0; x < term.width/2; x++ {
-			putBlock(modell.Block{
-				Coord: modell.Coords{
-					X: x,
-					Y: y,
+func (term *termboxController) draw() {
+	for _, snake := range state.getSnakes() {
+		for i, block := range snake.Body {
+			if i == 0 {
+				putBlock(modell.Coords{
+					X: block.X,
+					Y: block.Y,
 				},
-				Color:      termbox.ColorDefault,
-				Background: termbox.Attribute(rand.Int()%8) + 1,
-				LeftRune:   ' ',
-				RightRune:  ' ',
-			})
+					termbox.ColorBlack,
+					snake.BgColor,
+					' ',
+					' ',
+				)
+			} else {
+				putBlock(modell.Coords{
+					X: block.X,
+					Y: block.Y,
+				},
+					termbox.ColorBlack,
+					snake.BgColor,
+					'(',
+					')',
+				)
+
+			}
 		}
 	}
 }

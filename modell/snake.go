@@ -6,7 +6,19 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-// import "github.com/rs/xid"
+// Snake represents a snake-object
+type Snake struct {
+	ID           string            `json:"id"`
+	UserID       string            `json:"userid"`
+	Color        termbox.Attribute `json:"color"`
+	BgColor      termbox.Attribute `json:"bgcolor"`
+	HeadRune     rune              `json:"headrune"`
+	LeftRune     rune              `json:"leftrune"`
+	RightRune    rune              `json:"rightrune"`
+	Body         []Coords          `json:"body"`
+	Direction    Direction         `json:"direction"`
+	TargetLength int               `json:"targetlength"`
+}
 
 // Direction represents a movement relative to x y
 type Direction struct {
@@ -54,29 +66,13 @@ func RandomDirection() Direction {
 	return Directions[rand.Intn(len(Directions))]
 }
 
-// Snake represents a snake-object
-type Snake struct {
-	ID           string            `json:"id"`
-	PlayerID     string            `json:"playerid"`
-	Color        termbox.Attribute `json:"color"`
-	Body         []Block           `json:"body"`
-	Direction    Direction         `json:"direction"`
-	TargetLength int               `json:"targetlength"`
-}
-
 // ClaculateSnakeBody will return a slice of Blocks based on given coordinates and direction
-func ClaculateSnakeBody(x, y int, color termbox.Attribute, direction Direction) []Block {
-	body := []Block{}
-	for i := 0; i < 3; i++ {
-		block := Block{
-			Coord: Coords{
-				X: x + direction.VX*i,
-				Y: y + direction.VY*i,
-			},
-			Color:      color,
-			Background: termbox.ColorDefault,
-			LeftRune:   ' ',
-			RightRune:  ' ',
+func ClaculateSnakeBody(x, y, length int, direction Direction) []Coords {
+	body := []Coords{}
+	for i := 0; i < length; i++ {
+		block := Coords{
+			X: x + direction.Opposite().VX*i,
+			Y: y + direction.Opposite().VY*i,
 		}
 		body = append(body, block)
 	}

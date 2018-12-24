@@ -10,11 +10,13 @@ import (
 
 	"github.com/gorilla/websocket"
 	termbox "github.com/nsf/termbox-go"
+
+	log "github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
-	"github.com/mikloslorinczi/snake-hub/state"
 	"github.com/mikloslorinczi/snake-hub/utils"
 )
 
@@ -31,59 +33,82 @@ var (
 	serverMsgChan = make(chan modell.ServerMsg, 10)
 	clientMsgChan = make(chan modell.ClientMsg, 10)
 
-	gameState  state.State
-	stateMutex sync.RWMutex
+	ws = &wsController{
+		stopReader: exitChan,
+		stopWriter: exitChan,
+	}
+	tc = &termboxController{
+		stopEventLoop: exitChan,
+		stopRender:    exitChan,
+	}
+	state = &stateController{
+		loaded: false,
+	}
 )
 
 // Run starts the Client...
 func Run() {
 
-	fmt.Println("Initializing Snake Client...")
+	// Log formatter
+	customFormatter := &log.TextFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+		FullTimestamp:   true,
+	}
+	log.SetFormatter(customFormatter)
 
-	fmt.Println("Connecting to Snake-Hub")
+	// Log level
+	if viper.GetBool("SNAKE_DEBUG") {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
+	// Log file
+	logFile, err := os.OpenFile("snake-hub-client.log", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+
+	log.Info("Initializing Snake Client...")
+
+	log.Info("Connecting to Snake-Hub")
 	if err := getConn(); err != nil {
-		gracefulStop(fmt.Sprintf("Cannot connect to the Snake-hub server %s\n", err), 1)
+		gracefulStop(fmt.Sprintf("Cannot connect to the Snake-hub server %s", err), 1)
 	}
 	connOpen = true
 
-	fmt.Println("Joining game...")
+	log.Info("Joining game...")
 	if err := login(); err != nil {
-		gracefulStop(fmt.Sprintf("Snake-hub refused the connection %s\n", err), 1)
+		gracefulStop(fmt.Sprintf("Snake-hub refused the connection %s", err), 1)
 	}
 
-	fmt.Println("Initializeing TermBox...")
-	err := termbox.Init()
-	if err != nil {
-		gracefulStop(fmt.Sprintf("Termbox init error %v\n", err), 1)
+	log.Info("Initializeing TermBox...")
+	if err := termbox.Init(); err != nil {
+		gracefulStop(fmt.Sprintf("Termbox init error %v", err), 1)
 	}
 	termboxOpen = true
 
-	fmt.Println("Starting WebSocket Handler...")
-	ws := &wsHandler{
-		stopReader: exitChan,
-		stopWriter: exitChan,
-	}
+	log.Info("Starting WebSocket Controller...")
 	go ws.startReader()
 	go ws.startWriter()
 
-	fmt.Println("Starting Termbox loop...")
-	tw := &termboxWorker{
-		stopEventLoop: exitChan,
-		stopRender:    exitChan,
-	}
-	tw.getSize()
-	go tw.startEventloop()
-	go tw.startRenderer()
+	log.Info("Starting Termbox Controller...")
+	tc.getSize()
+	go tc.startEventloop()
+	go tc.startRenderer()
 
-	fmt.Println("Entering mainloop")
-	returnMsg := ""
+	log.Info("Entering mainloop")
+	returnMsg := "gg bb"
 	returnCode := 0
 
 mainLoop:
 	for {
 		select {
 		case err := <-errorChan:
-			errStr := fmt.Sprintf("Error : %s\n", err)
+			log.WithField("Msg", err).Debug("Msg Received on errorChan")
+			errStr := fmt.Sprintf("Error : %s", err)
 			close(exitChan)
 			if !strings.Contains(errStr, "Terminated by user") {
 				returnCode = 1
@@ -98,7 +123,7 @@ mainLoop:
 }
 
 func getConn() error {
-	// Get the URL of Snake-hub server send client ID and Snake Secret as query string
+	// Get the URL of Snake-hub server, send client ID and Snake Secret as query string
 	u := url.URL{
 		Scheme:   "ws",
 		Host:     viper.GetString("SNAKE_URL"),
@@ -106,7 +131,8 @@ func getConn() error {
 		RawQuery: fmt.Sprintf("clientid=%s&snakesecret=%s", clientID, viper.Get("SNAKE_SECRET")),
 	}
 	wsURL := u.String()
-	fmt.Printf("Connecting to %v...\n", wsURL)
+
+	log.WithField("Connection string", wsURL).Info("Connecting to WebSocket server")
 
 	wsConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
@@ -120,7 +146,7 @@ func getConn() error {
 
 func login() error {
 
-	fmt.Printf("Joining game with client ID: %s\n", clientID)
+	log.WithField("Client ID", clientID).Info("Joining game with client ID")
 	msg := modell.ClientMsg{
 		ClientID: clientID,
 		Type:     "handshake",
@@ -135,37 +161,39 @@ func login() error {
 		return errors.Wrap(err, "Cannot read from WebSocket")
 	}
 
-	fmt.Printf("Hanshake response %v\n", resp)
+	log.WithField("Server Msg", resp).Info("Hanshake response")
 	return nil
 
 }
 
-// Print close message, stop WebSocket, stop Termbox, return status code
+// Log close message, stop WebSocket, stop Termbox, return status code
 func gracefulStop(msg string, returnCode int) {
 
-	fmt.Println(msg)
+	log.Info(msg)
 
-	if connOpen {
+	if termboxOpen {
 
-		fmt.Println("Closing WebSocket Connection...")
-		if err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
-			fmt.Printf("Cannot send close message on WebSocket %s\n", err)
+		log.Info("Closing Termbox...")
+		if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
+			log.WithField("Error", err).Error("Cannot clear Termbox")
 		}
-		time.Sleep(time.Second / 3)
-
-		fmt.Println("Closing Websocket...")
-		if err := conn.Close(); err != nil {
-			fmt.Printf("Cannot close WebSocket connection properly %s\n", err)
-		}
+		termbox.Close()
 		time.Sleep(time.Second / 3)
 
 	}
 
-	if termboxOpen {
+	if connOpen {
 
-		fmt.Println("Closing Termbox...")
-		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-		termbox.Close()
+		log.Info("Closing WebSocket Connection...")
+		if err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
+			log.WithField("Error", err).Error("Cannot send close message on WebSocket")
+		}
+		time.Sleep(time.Second / 3)
+
+		log.Info("Closing Websocket...")
+		if err := conn.Close(); err != nil {
+			log.WithField("Error", err).Error("Cannot close WebSocket connection properly")
+		}
 		time.Sleep(time.Second / 3)
 
 	}

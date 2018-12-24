@@ -1,8 +1,9 @@
-package server
+package template
 
 import "html/template"
 
-var homeTemplate = template.Must(template.New("").Parse(`
+// Home is the index page
+var Home = template.Must(template.New("").Parse(`
 <!DOCTYPE html>
 <html lang="en">
 <head>

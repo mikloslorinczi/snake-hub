@@ -7,6 +7,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+
+	"github.com/mikloslorinczi/snake-hub/template"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -27,7 +29,7 @@ func hub(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	newClient(id, conn)
+	wsHub.newClient(id, conn)
 
 }
 
@@ -65,5 +67,5 @@ func auth(req *http.Request) (string, error) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "")
+	template.Home.Execute(w, "")
 }

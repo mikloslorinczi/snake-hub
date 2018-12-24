@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"math/rand"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
 
@@ -18,6 +21,9 @@ func main() {
 
 func init() {
 
+	// Random Seed
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// Load config from snake-hub.yaml and ENV
 	if err := utils.ReadConfig("./", "snake-hub", nil); err != nil {
 		fmt.Printf("Cannot set configuration %v\n", err)
@@ -32,6 +38,11 @@ func init() {
 	cmd.RootCmd.PersistentFlags().BoolP("debug", "d", false, "Debug mode")
 	if err := viper.BindPFlag("SNAKE_DEBUG", cmd.RootCmd.PersistentFlags().Lookup("debug")); err != nil {
 		fmt.Printf("Cannot bind flag 'debug' to SNAKE_DEBUG %v\n", err)
+	}
+
+	cmd.RootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose mode")
+	if err := viper.BindPFlag("SNAKE_VERBOSE", cmd.RootCmd.PersistentFlags().Lookup("verbose")); err != nil {
+		fmt.Printf("Cannot bind flag 'verbose' to SNAKE_VERBOSE %v\n", err)
 	}
 
 }
