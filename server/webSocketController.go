@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
-	"github.com/tidwall/gjson"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
 )
@@ -26,35 +25,6 @@ type clientHub struct {
 	closeChan chan struct{}
 	clients   []*clientController
 	mu        sync.Mutex
-}
-
-func (client *clientController) handleMsg(msgType string, msg *[]byte) {
-	log.WithFields(log.Fields{
-		"User ID": client.userID,
-		"Type":    msgType,
-		"Body":    string(*msg),
-	}).Debug("Incoming WS Messgae")
-	switch {
-	case msgType == "handshake":
-		{
-			resp := modell.ServerMsg{
-				Type: "handshake",
-				Data: fmt.Sprintf("Handshake accapted from user %v", client.userID),
-			}
-			if err := client.conn.WriteJSON(resp); err != nil {
-				client.clientErrChan <- err
-				return
-			}
-			gameState.AddUser(modell.User{
-				ID: client.userID,
-			})
-		}
-	default:
-		log.WithFields(log.Fields{
-			"Type": msgType,
-			"Body": string(*msg),
-		}).Warn("Unknown message type")
-	}
 }
 
 func (client *clientController) init() {
@@ -106,16 +76,54 @@ clientLoop:
 	close(client.killChan)
 }
 
+func (client *clientController) newDirection(direction string) {
+
+}
+
+func (client *clientController) handleMsg(msg modell.ClientMsg) {
+	log.WithFields(log.Fields{
+		"User ID": msg.ClientID,
+		"Type":    msg.Type,
+		"Body":    msg.Data,
+	}).Debug("Incoming WS Messgae")
+	switch {
+	case msg.Type == "handshake":
+		{
+			resp := modell.ServerMsg{
+				Type: "handshake",
+				Data: fmt.Sprintf("Handshake accapted from user %v", client.userID),
+			}
+			if err := client.conn.WriteJSON(resp); err != nil {
+				client.clientErrChan <- err
+				return
+			}
+			gameState.AddUser(modell.User{
+				ID: client.userID,
+			})
+		}
+	case msg.Type == "control":
+		{
+			go gameState.ChangeDirection(client.userID, msg.Data)
+		}
+	default:
+		log.WithFields(log.Fields{
+			"Client ID": msg.ClientID,
+			"Type":      msg.Type,
+			"Body":      msg.Data,
+		}).Warn("Unknown message type")
+	}
+}
+
 // msgReader will read the next message from the client and pass it to the handler
 func (client *clientController) msgReader() {
 	log.WithField("User ID", client.userID).Debug("Start reading client messages")
 	for {
-		_, message, err := client.conn.ReadMessage()
-		if err != nil {
+		msg := modell.ClientMsg{}
+		if err := client.conn.ReadJSON(&msg); err != nil {
 			client.clientErrChan <- err
 			return
 		}
-		client.handleMsg(gjson.GetBytes(message, "type").String(), &message)
+		client.handleMsg(msg)
 	}
 }
 

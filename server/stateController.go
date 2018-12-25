@@ -30,6 +30,18 @@ func (sc *stateController) GetUser(id string) (bool, *modell.User) {
 	return false, nil
 }
 
+// GetUser returns the user associated with the given ID
+func (sc *stateController) GetSnake(userID string) (bool, *modell.Snake) {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+	for _, snake := range sc.state.Snakes {
+		if snake.UserID == userID {
+			return true, &snake
+		}
+	}
+	return false, nil
+}
+
 // AddUser adds a new user to the game
 func (sc *stateController) AddUser(user modell.User) {
 	sc.mu.Lock()
@@ -92,15 +104,16 @@ func (sc *stateController) GetNewSnake(userID string) *modell.Snake {
 	}
 
 	snake := &modell.Snake{
-		ID:           utils.NewID(),
-		UserID:       userID,
-		Color:        termbox.ColorWhite,
-		BgColor:      termbox.ColorCyan,
-		LeftRune:     ' ',
-		RightRune:    ' ',
-		Body:         modell.ClaculateSnakeBody(x, y, 3, direction),
-		Direction:    direction,
-		TargetLength: 3,
+		ID:            utils.NewID(),
+		UserID:        userID,
+		Color:         termbox.ColorWhite,
+		BgColor:       termbox.ColorCyan,
+		LeftRune:      ' ',
+		RightRune:     ' ',
+		Body:          modell.ClaculateSnakeBody(x, y, 3, direction, sc.state.Level),
+		Direction:     direction,
+		NextDirection: direction,
+		TargetLength:  3,
 	}
 
 	return snake
@@ -155,9 +168,26 @@ func (sc *stateController) validSnakePos(x, y int, direction modell.Direction) b
 
 }
 
+func (sc *stateController) ChangeDirection(userID, direction string) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	for i, snake := range sc.state.Snakes {
+		if snake.UserID == userID {
+			newDirection := modell.StringToDirection(direction)
+			if !snake.Direction.IsOpposite(newDirection) {
+				sc.state.Snakes[i].NextDirection = newDirection
+			}
+			return
+		}
+	}
+}
+
 // Update updates the game-state
 func (sc *stateController) Update() {
-
+	for i := range sc.state.Snakes {
+		sc.state.Snakes[i].Direction = sc.state.Snakes[i].NextDirection
+		sc.state.Snakes[i].Move(sc.state.Level)
+	}
 }
 
 // updateAndBroadcast the game-state to all clients
@@ -173,12 +203,14 @@ updateLoop:
 		default:
 
 			nextTick := time.Now().Add(time.Millisecond * 30) // ~33.3 FPS
+
 			go func() {
 				sc.mu.Lock()
 				defer sc.mu.Unlock()
 				sc.Update()
 				sc.stateChan <- sc.state
 			}()
+
 			time.Sleep(time.Until(nextTick))
 
 		}
