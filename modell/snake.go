@@ -6,6 +6,14 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+// Direction represents a movement relative to x y
+type Direction struct {
+	// VX X Velocity
+	VX int `json:"vx"`
+	// VY Y Velocity
+	VY int `json:"vy"`
+}
+
 // Snake represents a snake-object
 type Snake struct {
 	ID            string            `json:"id"`
@@ -19,56 +27,13 @@ type Snake struct {
 	Direction     Direction         `json:"direction"`
 	NextDirection Direction         `json:"nextdirection"`
 	TargetLength  int               `json:"targetlength"`
+	Speed         int               `json:"speed"`
+	StepSize      int               `json:"stepsize"`
 }
 
-// GetHeadCoords return the Coords of the first (0th) element of the body
-func (snake *Snake) GetHeadCoords() Coords {
-	if len(snake.Body) > 0 {
-		return snake.Body[0]
-	}
-	return Coords{}
-}
-
-// Move moves the snake
-func (snake *Snake) Move(lvl LevelMap) {
-	head := snake.GetHeadCoords()
-	newCoords := lvl.GetCoords(head.X+snake.Direction.VX, head.Y+snake.Direction.VY)
-	if len(snake.Body) < snake.TargetLength {
-		snake.Body = append([]Coords{newCoords}, snake.Body...)
-	} else {
-		snake.Body = append([]Coords{newCoords}, snake.Body[:len(snake.Body)-1]...)
-	}
-}
-
-// StringToDirection converts a string to a Direction
-func StringToDirection(s string) Direction {
-	switch {
-	case s == "up":
-		return Up
-	case s == "down":
-		return Down
-	case s == "left":
-		return Left
-	case s == "right":
-		return Right
-	}
-	return Direction{}
-}
-
-// ChangeDirection updates snake's next direction
-func (snake *Snake) ChangeDirection(direction string) {
-	newDirection := StringToDirection(direction)
-	if !snake.Direction.IsOpposite(newDirection) {
-		snake.NextDirection = newDirection
-	}
-}
-
-// Direction represents a movement relative to x y
-type Direction struct {
-	// VX X Velocity
-	VX int `json:"vx"`
-	// VY Y Velocity
-	VY int `json:"vy"`
+type snakeTexture struct {
+	leftRune  rune
+	rightRune rune
 }
 
 var (
@@ -81,8 +46,49 @@ var (
 	// Right VX 1 VY 0
 	Right = Direction{VX: 1, VY: 0}
 	// Directions is a slice of all directions
-	Directions = []Direction{Up, Down, Left, Right}
+	directions = []Direction{Up, Down, Left, Right}
+	// Heads is a slice of all available head rune
+	heads = []rune{'🐸', '😗', '😡', '🤢', '😈', '💀', '🤖', '😸', '👽', '🐷'}
+	// Textures is a slice of all available snake texture
+	textures = []snakeTexture{
+		{
+			leftRune:  '[',
+			rightRune: ']',
+		},
+		{
+			leftRune:  '(',
+			rightRune: ')',
+		},
+		{
+			leftRune:  '<',
+			rightRune: '>',
+		},
+		{
+			leftRune:  'o',
+			rightRune: 'O',
+		},
+		{
+			leftRune:  '~',
+			rightRune: '~',
+		},
+	}
 )
+
+// GetRandomHead returns a random head rune from all available head runes
+func GetRandomHead() rune {
+	return heads[rand.Intn(len(heads))]
+}
+
+// GetRandomTexture returns the left and right rune of a random texture
+func GetRandomTexture() (rune, rune) {
+	randomTexture := textures[rand.Intn(len(textures))]
+	return randomTexture.leftRune, randomTexture.rightRune
+}
+
+// RandomDirection returns a direction choosen at random
+func RandomDirection() Direction {
+	return directions[rand.Intn(len(directions))]
+}
 
 // IsOpposite returns true if new direction is the opposite of current direction
 func (current Direction) IsOpposite(new Direction) bool {
@@ -104,9 +110,51 @@ func (current Direction) Opposite() Direction {
 	return current
 }
 
-// RandomDirection returns a direction choosen at random
-func RandomDirection() Direction {
-	return Directions[rand.Intn(len(Directions))]
+// GetHeadCoords return the Coords of the first (0th) element of the body
+func (snake *Snake) GetHeadCoords() Coords {
+	if len(snake.Body) > 0 {
+		return snake.Body[0]
+	}
+	return Coords{}
+}
+
+// Update moves the snake, and changes direction to nextDirection
+func (snake *Snake) Update(lvl LevelMap) {
+
+	snake.StepSize += snake.Speed
+
+	if snake.StepSize >= 12 {
+
+		snake.StepSize = 0
+
+		head := snake.GetHeadCoords()
+
+		newCoords := lvl.GetCoords(head.X+snake.Direction.VX, head.Y+snake.Direction.VY)
+
+		if len(snake.Body) < snake.TargetLength { // If the snake is still growing, just append the body
+			snake.Body = append([]Coords{newCoords}, snake.Body...)
+		} else {
+			snake.Body = append([]Coords{newCoords}, snake.Body[:len(snake.Body)-1]...) // If it reached the target length, cut the last block
+		}
+
+		snake.Direction = snake.NextDirection
+
+	}
+}
+
+// StringToDirection converts a string to a Direction
+func StringToDirection(s string) Direction {
+	switch {
+	case s == "up":
+		return Up
+	case s == "down":
+		return Down
+	case s == "left":
+		return Left
+	case s == "right":
+		return Right
+	}
+	return Direction{}
 }
 
 // ClaculateSnakeBody will return a slice of Blocks based on given coordinates and direction

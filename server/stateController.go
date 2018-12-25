@@ -103,17 +103,22 @@ func (sc *stateController) GetNewSnake(userID string) *modell.Snake {
 		}
 	}
 
+	leftRune, rightRune := modell.GetRandomTexture()
+
 	snake := &modell.Snake{
 		ID:            utils.NewID(),
 		UserID:        userID,
-		Color:         termbox.ColorWhite,
-		BgColor:       termbox.ColorCyan,
-		LeftRune:      ' ',
-		RightRune:     ' ',
+		Color:         termbox.Attribute(rand.Int()%8) + 1,
+		BgColor:       termbox.Attribute(rand.Int()%8) + 1,
+		HeadRune:      modell.GetRandomHead(),
+		LeftRune:      leftRune,
+		RightRune:     rightRune,
 		Body:          modell.ClaculateSnakeBody(x, y, 3, direction, sc.state.Level),
 		Direction:     direction,
 		NextDirection: direction,
 		TargetLength:  3,
+		Speed:         rand.Intn(6) + 1,
+		StepSize:      0,
 	}
 
 	return snake
@@ -185,8 +190,7 @@ func (sc *stateController) ChangeDirection(userID, direction string) {
 // Update updates the game-state
 func (sc *stateController) Update() {
 	for i := range sc.state.Snakes {
-		sc.state.Snakes[i].Direction = sc.state.Snakes[i].NextDirection
-		sc.state.Snakes[i].Move(sc.state.Level)
+		sc.state.Snakes[i].Update(sc.state.Level)
 	}
 }
 

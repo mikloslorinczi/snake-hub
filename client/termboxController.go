@@ -105,9 +105,9 @@ func (term *termboxController) draw() {
 					X: block.X,
 					Y: block.Y,
 				},
-					termbox.ColorBlack,
+					snake.Color,
 					snake.BgColor,
-					' ',
+					snake.HeadRune,
 					' ',
 				)
 			} else {
@@ -115,10 +115,10 @@ func (term *termboxController) draw() {
 					X: block.X,
 					Y: block.Y,
 				},
-					termbox.ColorBlack,
+					snake.Color,
 					snake.BgColor,
-					'(',
-					')',
+					snake.LeftRune,
+					snake.RightRune,
 				)
 
 			}
