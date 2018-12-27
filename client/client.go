@@ -37,10 +37,12 @@ var (
 		stopReader: exitChan,
 		stopWriter: exitChan,
 	}
+
 	tc = &termboxController{
 		stopEventLoop: exitChan,
 		stopRender:    exitChan,
 	}
+
 	state = &stateController{
 		loaded: false,
 	}

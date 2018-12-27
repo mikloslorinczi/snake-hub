@@ -61,8 +61,8 @@ clientLoop:
 
 	log.WithField("User ID", client.userID).Debug("Client connection closed")
 
-	gameState.RemoveSnake(client.userID)
-	gameState.RemoveUser(client.userID)
+	gameState.removeSnake(client.userID)
+	gameState.removeUser(client.userID)
 	wsHub.removeClient(client.userID)
 	close(client.killChan)
 }
@@ -117,13 +117,13 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 				client.clientErrChan <- err
 				return
 			}
-			go gameState.AddUser(modell.User{
+			go gameState.addUser(modell.User{
 				ID: client.userID,
 			})
 		}
 	case msg.Type == "control":
 		{
-			go gameState.ChangeDirection(client.userID, msg.Data)
+			go gameState.changeDirection(client.userID, msg.Data)
 		}
 	default:
 		log.WithFields(log.Fields{

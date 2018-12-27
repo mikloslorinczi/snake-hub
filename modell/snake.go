@@ -29,6 +29,7 @@ type Snake struct {
 	TargetLength  int               `json:"targetlength"`
 	Speed         int               `json:"speed"`
 	StepSize      int               `json:"stepsize"`
+	Alive         bool              `josn:"alive"`
 }
 
 type snakeTexture struct {

@@ -18,11 +18,13 @@ var (
 	errorChan = make(chan error, 10)
 	exitChan  = make(chan struct{}, 1)
 	stateChan = make(chan modell.State, 5)
+
 	gameState = &stateController{
 		stateChan: stateChan,
 		closeChan: exitChan,
-		state:     modell.NewState(25, 25, termbox.ColorDefault),
+		state:     *modell.NewState(25, 25, termbox.ColorDefault),
 	}
+
 	wsHub = &clientHub{
 		stateChan: stateChan,
 		closeChan: exitChan,

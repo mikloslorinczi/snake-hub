@@ -1,13 +1,10 @@
 package server
 
 import (
-	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
-	"github.com/mikloslorinczi/snake-hub/utils"
-	termbox "github.com/nsf/termbox-go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,162 +15,67 @@ type stateController struct {
 	mu        sync.RWMutex
 }
 
-// GetUser returns the user associated with the given ID
-func (sc *stateController) GetUser(id string) (bool, *modell.User) {
+func (sc *stateController) getUser(id string) (bool, *modell.User) {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
-	for _, user := range sc.state.Users {
-		if user.ID == id {
-			return true, &user
-		}
-	}
-	return false, nil
+	return sc.state.GetUser(id)
 }
 
-// GetUser returns the user associated with the given ID
-func (sc *stateController) GetSnake(userID string) (bool, *modell.Snake) {
+func (sc *stateController) getSnake(userID string) (bool, *modell.Snake) {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
-	for _, snake := range sc.state.Snakes {
-		if snake.UserID == userID {
-			return true, &snake
-		}
-	}
-	return false, nil
+	return sc.state.GetSnake(userID)
 }
 
-// AddUser adds a new user to the game
-func (sc *stateController) AddUser(user modell.User) {
+func (sc *stateController) getFood(id string) (bool, *modell.Food) {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+	return sc.state.GetFood(id)
+}
+
+func (sc *stateController) addUser(user modell.User) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	snake := sc.GetNewSnake(user.ID)
-	user.SnakeID = snake.ID
-	sc.state.Users = append(sc.state.Users, user)
-	go sc.AddSnake(*snake)
+	sc.state.AddUser(user)
 }
 
-// AddSnake adds a new snake to the game
-func (sc *stateController) AddSnake(snake modell.Snake) {
+func (sc *stateController) addSnake(snake modell.Snake) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	sc.state.Snakes = append(sc.state.Snakes, snake)
+	sc.state.AddSnake(snake)
 }
 
-// RemoveUser removes an user from the game
-func (sc *stateController) RemoveUser(id string) bool {
+func (sc *stateController) addFood(food modell.Food) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	for i, user := range sc.state.Users {
-		if user.ID == id {
-			sc.state.Users = append(sc.state.Users[:i], sc.state.Users[i+1:]...)
-			return true
-		}
-	}
-	return false
+	sc.state.AddFood(food)
 }
 
-// RemoveSnake removes the snake associated with the given User ID
-func (sc *stateController) RemoveSnake(userID string) bool {
+func (sc *stateController) removeUser(id string) bool {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	for i, snake := range sc.state.Snakes {
-		if snake.UserID == userID {
-			for _, user := range sc.state.Users {
-				if user.SnakeID == snake.ID {
-					user.SnakeID = ""
-				}
-			}
-			sc.state.Snakes = append(sc.state.Snakes[:i], sc.state.Snakes[i+1:]...)
-			return true
-		}
-	}
-	return false
+	return sc.state.RemoveUser(id)
 }
 
-// GetNewSnake generates a new snake, on a valid position, facing to a random direction
-func (sc *stateController) GetNewSnake(userID string) *modell.Snake {
-
-	x, y := 0, 0
-	direction := modell.Up
-	for {
-		direction = modell.RandomDirection()
-		x, y = rand.Intn(sc.state.Level.Width), rand.Intn(sc.state.Level.Height)
-		if sc.validSnakePos(x, y, direction) {
-			break
-		}
-	}
-
-	leftRune, rightRune := modell.GetRandomTexture()
-
-	snake := &modell.Snake{
-		ID:            utils.NewID(),
-		UserID:        userID,
-		Color:         termbox.Attribute(rand.Int()%8) + 1,
-		BgColor:       termbox.Attribute(rand.Int()%8) + 1,
-		HeadRune:      modell.GetRandomHead(),
-		LeftRune:      leftRune,
-		RightRune:     rightRune,
-		Body:          modell.ClaculateSnakeBody(x, y, 3, direction, sc.state.Level),
-		Direction:     direction,
-		NextDirection: direction,
-		TargetLength:  3,
-		Speed:         rand.Intn(6) + 1,
-		StepSize:      0,
-	}
-
-	return snake
-
+func (sc *stateController) removeSnake(userID string) bool {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	return sc.state.RemoveSnake(userID)
 }
 
-func (sc *stateController) validSnakePos(x, y int, direction modell.Direction) bool {
-
-	boxX, boxY, boxW, boxH := 0, 0, 0, 0
-
-	switch direction {
-
-	case modell.Up:
-		boxX = x - 2
-		boxY = y - 3
-		boxW = 5
-		boxH = 7
-
-	case modell.Down:
-		boxX = x - 2
-		boxY = y - 4
-		boxW = 5
-		boxH = 7
-
-	case modell.Left:
-		boxX = x - 3
-		boxY = y - 2
-		boxW = 7
-		boxH = 5
-
-	case modell.Right:
-		boxX = x + 3
-		boxY = y - 2
-		boxW = 7
-		boxH = 5
-	}
-
-	for by := 0; by < boxH; by++ {
-		for bx := 0; bx < boxW; bx++ {
-			pos := sc.state.Level.GetCoords(boxX+bx, boxY+by)
-			for _, snake := range sc.state.Snakes {
-				for _, block := range snake.Body {
-					if block.X == pos.X && block.Y == pos.Y {
-						return false
-					}
-				}
-			}
-		}
-	}
-
-	return true
-
+func (sc *stateController) removeFood(id string) bool {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	return sc.state.RemoveFood(id)
 }
 
-func (sc *stateController) ChangeDirection(userID, direction string) {
+func (sc *stateController) newFood() {
+	sc.mu.Lock()
+	sc.mu.Unlock()
+	sc.state.NewFood()
+}
+
+func (sc *stateController) changeDirection(userID, direction string) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	for i, snake := range sc.state.Snakes {
@@ -187,11 +89,45 @@ func (sc *stateController) ChangeDirection(userID, direction string) {
 	}
 }
 
+func (sc *stateController) updateFoods() {
+	if len(sc.state.Foods) == 0 {
+		sc.state.NewFood()
+	}
+}
+
+func (sc *stateController) checkCollosions() {
+	for i := range sc.state.Snakes {
+		id := sc.state.Snakes[i].UserID
+		head := sc.state.Snakes[i].GetHeadCoords()
+		for _, food := range sc.state.Foods {
+			if head.X == food.Pos.X && head.Y == food.Pos.Y {
+				sc.state.Snakes[i].TargetLength += 3
+				sc.state.RemoveFood(food.ID)
+				sc.state.NewFood()
+			}
+		}
+		for _, snake := range sc.state.Snakes {
+			for j, block := range snake.Body {
+				// Do not collide with own head
+				if head.X == block.X && head.Y == block.Y && id == snake.UserID && j == 0 {
+					continue
+				}
+				if head.X == block.X && head.Y == block.Y {
+					sc.state.RemoveSnake(id)
+					sc.state.AddSnake(*sc.state.GetNewSnake(id))
+				}
+			}
+		}
+	}
+}
+
 // Update updates the game-state
-func (sc *stateController) Update() {
+func (sc *stateController) update() {
 	for i := range sc.state.Snakes {
 		sc.state.Snakes[i].Update(sc.state.Level)
 	}
+	sc.checkCollosions()
+	sc.updateFoods()
 }
 
 // updateAndBroadcast the game-state to all clients
@@ -211,7 +147,7 @@ updateLoop:
 			go func() {
 				sc.mu.Lock()
 				defer sc.mu.Unlock()
-				sc.Update()
+				sc.update()
 				sc.stateChan <- sc.state
 			}()
 

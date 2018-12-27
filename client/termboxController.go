@@ -124,4 +124,7 @@ func (term *termboxController) draw() {
 			}
 		}
 	}
+	for _, food := range state.state.Foods {
+		putBlock(food.Pos, termbox.ColorDefault, termbox.ColorDefault, food.Type.LeftRune, food.Type.RightRune)
+	}
 }
