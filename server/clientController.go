@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/gorilla/websocket"
 
@@ -61,8 +62,13 @@ clientLoop:
 
 	log.WithField("User ID", client.userID).Debug("Client connection closed")
 
-	gameState.removeSnake(client.userID)
-	gameState.removeUser(client.userID)
+	go func() {
+		gameState.mu.Lock()
+		defer gameState.mu.Unlock()
+		gameState.state.RemoveSnake(client.userID)
+		gameState.state.RemoveUser(client.userID)
+	}()
+
 	wsHub.removeClient(client.userID)
 	close(client.killChan)
 }
@@ -109,17 +115,31 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 	switch {
 	case msg.Type == "handshake":
 		{
+			if len(gameState.state.Users) == viper.GetInt("SNAKE_MAX_PLAYER") {
+				resp := modell.ServerMsg{
+					Type: "handshake",
+					Data: fmt.Sprintf("Server is full (max player %d)", viper.GetInt("SNAKE_MAX_PLAYER")),
+				}
+				if err := client.conn.WriteJSON(resp); err != nil {
+					client.clientErrChan <- err
+				}
+				return
+			}
 			resp := modell.ServerMsg{
 				Type: "handshake",
-				Data: fmt.Sprintf("Handshake accapted from user %v", client.userID),
+				Data: fmt.Sprintf("User successfully loged in with User ID %v", client.userID),
 			}
 			if err := client.conn.WriteJSON(resp); err != nil {
 				client.clientErrChan <- err
 				return
 			}
-			go gameState.addUser(modell.User{
-				ID: client.userID,
-			})
+			go func() {
+				gameState.mu.Lock()
+				defer gameState.mu.Unlock()
+				gameState.state.AddUser(modell.User{
+					ID: client.userID,
+				})
+			}()
 		}
 	case msg.Type == "control":
 		{

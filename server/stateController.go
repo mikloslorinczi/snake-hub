@@ -15,66 +15,6 @@ type stateController struct {
 	mu        sync.RWMutex
 }
 
-func (sc *stateController) getUser(id string) (bool, *modell.User) {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-	return sc.state.GetUser(id)
-}
-
-func (sc *stateController) getSnake(userID string) (bool, *modell.Snake) {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-	return sc.state.GetSnake(userID)
-}
-
-func (sc *stateController) getFood(id string) (bool, *modell.Food) {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-	return sc.state.GetFood(id)
-}
-
-func (sc *stateController) addUser(user modell.User) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	sc.state.AddUser(user)
-}
-
-func (sc *stateController) addSnake(snake modell.Snake) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	sc.state.AddSnake(snake)
-}
-
-func (sc *stateController) addFood(food modell.Food) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	sc.state.AddFood(food)
-}
-
-func (sc *stateController) removeUser(id string) bool {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	return sc.state.RemoveUser(id)
-}
-
-func (sc *stateController) removeSnake(userID string) bool {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	return sc.state.RemoveSnake(userID)
-}
-
-func (sc *stateController) removeFood(id string) bool {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	return sc.state.RemoveFood(id)
-}
-
-func (sc *stateController) newFood() {
-	sc.mu.Lock()
-	sc.mu.Unlock()
-	sc.state.NewFood()
-}
-
 func (sc *stateController) changeDirection(userID, direction string) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
@@ -113,20 +53,34 @@ func (sc *stateController) checkCollosions() {
 					continue
 				}
 				if head.X == block.X && head.Y == block.Y {
-					sc.state.RemoveSnake(id)
-					sc.state.AddSnake(*sc.state.GetNewSnake(id))
+					sc.state.Snakes[i].Alive = false
 				}
 			}
 		}
 	}
 }
 
-// Update updates the game-state
-func (sc *stateController) update() {
+func (sc *stateController) removeDeadSnakes() {
+	for _, snake := range sc.state.Snakes {
+		if !snake.Alive {
+			id := snake.UserID
+			sc.state.RemoveSnake(id)
+			sc.state.AddSnake(*sc.state.GetNewSnake(id))
+		}
+	}
+}
+
+func (sc *stateController) moveSnakes() {
 	for i := range sc.state.Snakes {
 		sc.state.Snakes[i].Update(sc.state.Level)
 	}
+}
+
+// Update updates the game-state
+func (sc *stateController) update() {
+	sc.moveSnakes()
 	sc.checkCollosions()
+	sc.removeDeadSnakes()
 	sc.updateFoods()
 }
 

@@ -142,12 +142,14 @@ func (s *State) GetNewSnake(userID string) *Snake {
 		TargetLength:  3,
 		Speed:         rand.Intn(6) + 1,
 		StepSize:      0,
+		Alive:         true,
 	}
 
 	return snake
 
 }
 
+// validSnakePos will return true if there is enugh space for a new snake in the given position
 func (s *State) validSnakePos(x, y int, direction Direction) bool {
 
 	boxX, boxY, boxW, boxH := 0, 0, 0, 0
@@ -183,6 +185,7 @@ func (s *State) validSnakePos(x, y int, direction Direction) bool {
 
 }
 
+// isEmpty will return true if there is no snake or food in the given area
 func (s *State) isEmpty(x, y, width, height int) bool {
 
 	for by := 0; by < height; by++ {

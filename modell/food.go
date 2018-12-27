@@ -13,6 +13,7 @@ type FoodType struct {
 	LeftRune  rune              `json:"leftrune"`
 	RightRune rune              `json:"rightrune"`
 	Score     int               `json:"score"`
+	Effect    string            `json:"effect"`
 }
 
 // Food represents a bonus object that can be eaten by snakes
@@ -29,16 +30,26 @@ var (
 		RightRune: ' ',
 		Score:     1,
 	}
-	// Apple ...
-	// Apple = &FoodType{
-	// 	LeftRune:  ' ',
-	// 	RightRune: ' ',
-	// 	Score:     1,
-	// }
+
+	// Banana ...
+	Banana = FoodType{
+		LeftRune:  '🍌',
+		RightRune: ' ',
+		Score:     1,
+	}
+
+	// Shroom ...
+	Shroom = FoodType{
+		LeftRune:  '🍄',
+		RightRune: ' ',
+		Score:     1,
+	}
 
 	// FoodTypes is a slice of all available food type
 	FoodTypes = []FoodType{
 		Apple,
+		Banana,
+		Shroom,
 	}
 )
 

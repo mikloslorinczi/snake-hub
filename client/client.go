@@ -164,6 +164,11 @@ func login() error {
 	}
 
 	log.WithField("Server Msg", resp).Info("Hanshake response")
+
+	if strings.Contains(resp.Data, "Server is full") {
+		return errors.New(resp.Data)
+	}
+
 	return nil
 
 }
@@ -198,6 +203,10 @@ func gracefulStop(msg string, returnCode int) {
 		}
 		time.Sleep(time.Second / 3)
 
+	}
+
+	if returnCode != 0 {
+		fmt.Printf("\nAn error occured during execution, check snake-hub-client.log for details\n")
 	}
 
 	os.Exit(returnCode)

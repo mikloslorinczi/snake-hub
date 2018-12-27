@@ -1,3 +1,4 @@
+
 ---
 
 # Snake-hub config
@@ -5,7 +6,7 @@
 SNAKE_SECRET: pythonforpresident
 SNAKE_MAX_PLAYER: 10
 SNAKE_MAP_HEIGHT: 25
-SNAKE_MAP_WIDTH: 50
+SNAKE_MAP_WIDTH: 25
 # SNAKE_DEBUG: true
 # SNAKE_VERBOSE: true
 

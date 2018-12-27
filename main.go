@@ -26,7 +26,7 @@ func init() {
 
 	// Load config from snake-hub.yaml and ENV
 	if err := utils.ReadConfig("./", "snake-hub", nil); err != nil {
-		fmt.Printf("Cannot set configuration %v\n", err)
+		fmt.Printf("Cannot load config: %v\n", err)
 	}
 
 	// Bind Cobra flags to Viper keys

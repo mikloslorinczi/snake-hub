@@ -5,9 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	termbox "github.com/nsf/termbox-go"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/nsf/termbox-go"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
 
@@ -22,7 +21,6 @@ var (
 	gameState = &stateController{
 		stateChan: stateChan,
 		closeChan: exitChan,
-		state:     *modell.NewState(25, 25, termbox.ColorDefault),
 	}
 
 	wsHub = &clientHub{
@@ -58,6 +56,8 @@ func Run() {
 		log.SetOutput(logFile)
 	}
 
+	gameState.state = *modell.NewState(viper.GetInt("SNAKE_MAP_WIDTH"), viper.GetInt("SNAKE_MAP_HEIGHT"), termbox.ColorDefault)
+
 	go wsHub.start()
 
 	go gameState.updateAndBroadcast()
@@ -66,7 +66,13 @@ func Run() {
 
 	http.HandleFunc("/", home)
 
-	log.WithField("PORT", viper.GetInt("SNAKE_PORT")).Info("Snake-hub Server listening...")
+	log.WithFields(log.Fields{
+		"PORT":       viper.GetInt("SNAKE_PORT"),
+		"Secret":     viper.GetString("SNAKE_SECRET"),
+		"Max Player": viper.GetInt("SNAKE_MAX_PLAYER"),
+		"Map Width":  viper.GetInt("SNAKE_MAP_WIDTH"),
+		"Map Height": viper.GetInt("SNAKE_MAP_HEIGHT"),
+	}).Info("Snake-hub Server listening")
 
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(viper.GetInt("SNAKE_PORT")), nil))
 

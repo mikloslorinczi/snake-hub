@@ -12,10 +12,6 @@ type wsController struct {
 
 func (ws *wsController) startReader() {
 	for {
-		// select {
-		// case <-ws.stopReader:
-		// 	return
-		// default:
 		msg := modell.ServerMsg{}
 		if err := conn.ReadJSON(&msg); err != nil {
 			errorChan <- err
@@ -37,8 +33,6 @@ func (ws *wsController) startReader() {
 		}
 	}
 }
-
-// }
 
 func (ws *wsController) startWriter() {
 	for {
