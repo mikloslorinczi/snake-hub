@@ -1,14 +1,11 @@
 package client
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/nsf/termbox-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/mikloslorinczi/snake-hub/modell"
 )
 
 type termboxController struct {
@@ -58,7 +55,7 @@ func (term *termboxController) startEventloop() {
 	}
 }
 
-// Render draws the scene...
+// Render draws the Scene...
 func (term *termboxController) startRenderer() {
 	for {
 		select {
@@ -70,16 +67,29 @@ func (term *termboxController) startRenderer() {
 
 			nextTick := time.Now().Add(time.Millisecond * 30) // ~33.3 FPS
 
-			if state.loaded {
-				if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
-					errorChan <- err
-				}
+			if !state.loaded {
+				time.Sleep(time.Until(nextTick))
+				continue
+			}
 
-				term.draw()
+			if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
+				errorChan <- errors.Wrap(err, "Cannot clear Termbox")
+			}
 
-				if err := termbox.Flush(); err != nil {
-					errorChan <- errors.Wrap(err, fmt.Sprintf("Cannot sync Termbox"))
+			w, h := state.getLvlSize()
+			if term.width < w*2 || term.height < h {
+				term.drawResizeMsg(w*2, h)
+			} else {
+				switch state.getScene() {
+				case "game":
+					term.drawGame()
+				default:
+					term.drawTextbox()
 				}
+			}
+
+			if err := termbox.Flush(); err != nil {
+				errorChan <- errors.Wrap(err, "Cannot sync Termbox")
 			}
 
 			time.Sleep(time.Until(nextTick))
@@ -90,41 +100,4 @@ func (term *termboxController) startRenderer() {
 
 func (term *termboxController) getSize() {
 	term.width, term.height = termbox.Size()
-}
-
-func putBlock(coords modell.Coords, color, bgColor termbox.Attribute, leftRune, rightRune rune) {
-	termbox.SetCell(coords.X*2, coords.Y, leftRune, color, bgColor)
-	termbox.SetCell(coords.X*2+1, coords.Y, rightRune, color, bgColor)
-}
-
-func (term *termboxController) draw() {
-	for _, snake := range state.getSnakes() {
-		for i, block := range snake.Body {
-			if i == 0 {
-				putBlock(modell.Coords{
-					X: block.X,
-					Y: block.Y,
-				},
-					snake.Color,
-					snake.BgColor,
-					snake.HeadRune,
-					' ',
-				)
-			} else {
-				putBlock(modell.Coords{
-					X: block.X,
-					Y: block.Y,
-				},
-					snake.Color,
-					snake.BgColor,
-					snake.LeftRune,
-					snake.RightRune,
-				)
-
-			}
-		}
-	}
-	for _, food := range state.state.Foods {
-		putBlock(food.Pos, termbox.ColorDefault, termbox.ColorDefault, food.Type.LeftRune, food.Type.RightRune)
-	}
 }

@@ -143,7 +143,9 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 		}
 	case msg.Type == "control":
 		{
-			go gameState.changeDirection(client.userID, msg.Data)
+			if gameState.getScene() == "game" {
+				go gameState.changeDirection(client.userID, msg.Data)
+			}
 		}
 	default:
 		log.WithFields(log.Fields{

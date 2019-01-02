@@ -56,7 +56,7 @@ func Run() {
 		log.SetOutput(logFile)
 	}
 
-	gameState.state = *modell.NewState(viper.GetInt("SNAKE_MAP_WIDTH"), viper.GetInt("SNAKE_MAP_HEIGHT"), termbox.ColorDefault)
+	gameState.state = *modell.NewState(viper.GetInt("SNAKE_MAP_WIDTH"), viper.GetInt("SNAKE_MAP_HEIGHT"), viper.GetInt("SNAKE_MAX_SCORE"), termbox.ColorDefault)
 
 	go wsHub.start()
 
@@ -69,6 +69,8 @@ func Run() {
 	log.WithFields(log.Fields{
 		"PORT":       viper.GetInt("SNAKE_PORT"),
 		"Secret":     viper.GetString("SNAKE_SECRET"),
+		"Max Score":  viper.GetInt("SNAKE_MAX_SCORE"),
+		"Min Player": viper.GetInt("SNAKE_MIN_PLAYER"),
 		"Max Player": viper.GetInt("SNAKE_MAX_PLAYER"),
 		"Map Width":  viper.GetInt("SNAKE_MAP_WIDTH"),
 		"Map Height": viper.GetInt("SNAKE_MAP_HEIGHT"),

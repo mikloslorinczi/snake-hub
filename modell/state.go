@@ -1,29 +1,37 @@
 package modell
 
 import (
+	"fmt"
 	"math/rand"
+	"sort"
+
+	"github.com/nsf/termbox-go"
 
 	"github.com/mikloslorinczi/snake-hub/utils"
-	"github.com/nsf/termbox-go"
 )
 
 // State represents the game-state
 // It can marshalled to JSON and sent over WebSockets
 type State struct {
-	Users  []User   `json:"users"`
-	Snakes []Snake  `json:"snakes"`
-	Foods  []Food   `json:"foods"`
-	Level  LevelMap `json:"level"`
+	Users    []User   `json:"users"`
+	Snakes   []Snake  `json:"snakes"`
+	Foods    []Food   `json:"foods"`
+	Level    LevelMap `json:"level"`
+	Scene    string   `json:"scene"`
+	Textbox  []string `json:"textbox"`
+	MaxScore int      `json:"maxscore"`
 }
 
-// NewState creates a new game with an empty map of width * height
-func NewState(width, height int, bgColor termbox.Attribute) *State {
+// NewState creates a new game with an empty map of width * height, in initial Scene
+func NewState(width, height, maxScore int, bgColor termbox.Attribute) *State {
 	return &State{
 		Level: LevelMap{
 			Width:   width,
 			Height:  height,
 			BgColor: bgColor,
 		},
+		MaxScore: maxScore,
+		Scene:    "wait",
 	}
 }
 
@@ -228,4 +236,57 @@ func (s *State) NewFood() {
 		Type: GetRandomFood(),
 	}
 	s.AddFood(food)
+}
+
+// AddScore search for User with the given ID and adds score to his/her scores
+func (s *State) AddScore(id string, score int) {
+	for i, user := range s.Users {
+		if user.ID == id {
+			s.Users[i].Score += score
+			return
+		}
+	}
+}
+
+// GetWinner check if any player has reached the State's max score, and return that player's ID
+func (s *State) GetWinner() string {
+	for _, user := range s.Users {
+		if user.Score >= s.MaxScore {
+			return user.ID
+		}
+	}
+	return ""
+}
+
+// ScoresToTextbox will format the State's Textbox to represent Player scores
+func (s *State) ScoresToTextbox() {
+	sort.Slice(s.Users, func(i, j int) bool {
+		return s.Users[i].Score > s.Users[j].Score
+	})
+	s.Textbox = []string{
+		"Round Over",
+		"",
+	}
+	for _, user := range s.Users {
+		s.Textbox = append(s.Textbox, fmt.Sprintf("Name: %s\tScore: %d", user.Name, user.Score))
+		s.Textbox = append(s.Textbox, "")
+	}
+}
+
+// NewRound removes all food and snake from the State, sets all player's score to 0,
+// generates a new sanke for every player, and a new food
+func (s *State) NewRound() {
+	for i := range s.Foods {
+		s.RemoveFood(s.Foods[i].ID)
+	}
+	for i := range s.Users {
+		s.Users[i].Score = 0
+		s.RemoveSnake(s.Users[i].ID)
+	}
+	for i := range s.Users {
+		snake := s.GetNewSnake(s.Users[i].ID)
+		s.Users[i].SnakeID = snake.ID
+		s.AddSnake(*snake)
+	}
+	s.NewFood()
 }

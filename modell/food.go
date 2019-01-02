@@ -8,12 +8,13 @@ import (
 
 // FoodType represents a type of food
 type FoodType struct {
-	Color     termbox.Attribute `json:"color"`
-	BgColor   termbox.Attribute `json:"bgcolor"`
-	LeftRune  rune              `json:"leftrune"`
-	RightRune rune              `json:"rightrune"`
-	Score     int               `json:"score"`
-	Effect    string            `json:"effect"`
+	Color          termbox.Attribute `json:"color"`
+	BgColor        termbox.Attribute `json:"bgcolor"`
+	LeftRune       rune              `json:"leftrune"`
+	RightRune      rune              `json:"rightrune"`
+	Score          int               `json:"score"`
+	LengthModifier int               `json:"lengthmodifier"`
+	SpeedModifier  int               `json:"speedmodifier"`
 }
 
 // Food represents a bonus object that can be eaten by snakes
@@ -26,23 +27,28 @@ type Food struct {
 var (
 	// Apple ...
 	Apple = FoodType{
-		LeftRune:  '🍎',
-		RightRune: ' ',
-		Score:     1,
+		LeftRune:       '🍎',
+		RightRune:      ' ',
+		Score:          1,
+		LengthModifier: 1,
 	}
 
 	// Banana ...
 	Banana = FoodType{
-		LeftRune:  '🍌',
-		RightRune: ' ',
-		Score:     1,
+		LeftRune:       '🍌',
+		RightRune:      ' ',
+		Score:          2,
+		LengthModifier: 2,
+		SpeedModifier:  1,
 	}
 
 	// Shroom ...
 	Shroom = FoodType{
-		LeftRune:  '🍄',
-		RightRune: ' ',
-		Score:     1,
+		LeftRune:       '🍄',
+		RightRune:      ' ',
+		Score:          2,
+		LengthModifier: 2,
+		SpeedModifier:  -1,
 	}
 
 	// FoodTypes is a slice of all available food type

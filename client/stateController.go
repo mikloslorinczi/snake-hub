@@ -20,6 +20,25 @@ func (st *stateController) loadState(bytes []byte) error {
 	return json.Unmarshal(bytes, &st.state)
 }
 
+// getLvlSize returns the Level's width height
+func (st *stateController) getLvlSize() (int, int) {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.state.Level.Width, st.state.Level.Height
+}
+
+func (st *stateController) getScene() string {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.state.Scene
+}
+
+func (st *stateController) getTextbox() []string {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.state.Textbox
+}
+
 func (st *stateController) getSnakes() []modell.Snake {
 	st.mu.RLock()
 	defer st.mu.RUnlock()

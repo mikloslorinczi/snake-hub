@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"github.com/spf13/viper"
 	"sync"
 	"time"
 
@@ -13,6 +15,19 @@ type stateController struct {
 	closeChan chan struct{}
 	state     modell.State
 	mu        sync.RWMutex
+	nextRound time.Time
+}
+
+func (sc *stateController) getScene() string {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+	return sc.state.Scene
+}
+
+func (sc *stateController) changeTextbox(newTextbox []string) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	sc.state.Textbox = newTextbox
 }
 
 func (sc *stateController) changeDirection(userID, direction string) {
@@ -40,8 +55,13 @@ func (sc *stateController) checkCollosions() {
 		id := sc.state.Snakes[i].UserID
 		head := sc.state.Snakes[i].GetHeadCoords()
 		for _, food := range sc.state.Foods {
+			// If collide with food
 			if head.X == food.Pos.X && head.Y == food.Pos.Y {
-				sc.state.Snakes[i].TargetLength += 3
+				sc.state.AddScore(id, food.Type.Score)
+				sc.state.Snakes[i].TargetLength += food.Type.LengthModifier
+				if newSpeed := sc.state.Snakes[i].Speed + food.Type.SpeedModifier; newSpeed >= 1 && newSpeed <= 6 {
+					sc.state.Snakes[i].Speed = newSpeed
+				}
 				sc.state.RemoveFood(food.ID)
 				sc.state.NewFood()
 			}
@@ -76,8 +96,60 @@ func (sc *stateController) moveSnakes() {
 	}
 }
 
+func (sc *stateController) updateScene() {
+	switch sc.state.Scene {
+	case "wait":
+		{
+			if len(sc.state.Users) >= viper.GetInt("SNAKE_MIN_PLAYER") {
+				log.WithField("Number of Players", len(sc.state.Users)).Info("Enugh player joined to start a game!")
+				sc.state.NewRound()
+				sc.state.Scene = "game"
+				sc.state.Textbox = nil
+				return
+			}
+			sc.state.Textbox = []string{
+				"Snake Hub",
+				"",
+				"Waiting for more player to join...",
+				"",
+				fmt.Sprintf("Connected Players %d", len(sc.state.Users)),
+				"",
+				fmt.Sprintf("Minimum number of Players %d", viper.GetInt("SNAKE_MIN_PLAYER")),
+				fmt.Sprintf("Maximum number of Players %d", viper.GetInt("SNAKE_MAX_PLAYER")),
+			}
+		}
+	case "scores":
+		{
+			if sc.nextRound.Before(time.Now()) {
+				log.Info("Score viewing time has passed, back to waiting...")
+				sc.state.Scene = "wait"
+				return
+			}
+		}
+	case "game":
+		{
+			if len(sc.state.Users) == 0 {
+				log.Info("All player left the game. Back to waiting...")
+				sc.state.Scene = "wait"
+				return
+			}
+			if id := sc.state.GetWinner(); id != "" {
+				log.WithField("User ID", id).Info("A Player has won the game!")
+				sc.state.ScoresToTextbox()
+				sc.state.Scene = "scores"
+				sc.nextRound = time.Now().Add(time.Second * 10)
+				return
+			}
+		}
+	}
+}
+
 // Update updates the game-state
 func (sc *stateController) update() {
+	sc.updateScene()
+	if sc.state.Scene != "game" {
+		return
+	}
 	sc.moveSnakes()
 	sc.checkCollosions()
 	sc.removeDeadSnakes()
