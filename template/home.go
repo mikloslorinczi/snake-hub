@@ -7,7 +7,7 @@ var Home = template.Must(template.New("").Parse(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Chat Example</title>
+<title>Sznék</title>
 <script type="text/javascript">
 window.onload = function () {
     var conn;

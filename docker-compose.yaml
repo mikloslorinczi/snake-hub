@@ -1,0 +1,18 @@
+version: '2'
+
+services:
+
+ server:
+
+    container_name: snake-hub
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - 4545:4545
+
+    working_dir: /app
+
+    command: ./snake-hub host -vd
