@@ -62,9 +62,11 @@ func Run() {
 
 	go gameState.updateAndBroadcast()
 
-	http.HandleFunc("/hub", hub)
+	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("www"))))
 
-	http.HandleFunc("/", home)
+	// http.HandleFunc("/", http.StripPrefix("/", http.FileServer(http.Dir(viper.GetString("www")))))
+
+	http.HandleFunc("/hub", hub)
 
 	log.WithFields(log.Fields{
 		"PORT":       viper.GetInt("SNAKE_PORT"),
