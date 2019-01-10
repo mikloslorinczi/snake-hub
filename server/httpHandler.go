@@ -7,8 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-
-	"github.com/mikloslorinczi/snake-hub/template"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -67,5 +65,6 @@ func auth(req *http.Request) (string, error) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	template.Home.Execute(w, "")
+	http.ServeFile(w, r, "www/home.html")
+	// template.Home.Execute(w, "")
 }
