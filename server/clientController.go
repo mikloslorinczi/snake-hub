@@ -113,11 +113,11 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 		"Body":    msg.Data,
 	}).Debug("Incoming WS Messgae")
 	switch {
-	case msg.Type == "handshake":
+	case msg.Type == "login":
 		{
 			if len(gameState.state.Users) == viper.GetInt("SNAKE_MAX_PLAYER") {
 				resp := modell.ServerMsg{
-					Type: "handshake",
+					Type: "login",
 					Data: fmt.Sprintf("Server is full (max player %d)", viper.GetInt("SNAKE_MAX_PLAYER")),
 				}
 				if err := client.conn.WriteJSON(resp); err != nil {
@@ -126,7 +126,7 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 				return
 			}
 			resp := modell.ServerMsg{
-				Type: "handshake",
+				Type: "login",
 				Data: fmt.Sprintf("User successfully loged in with User ID %v", client.userID),
 			}
 			if err := client.conn.WriteJSON(resp); err != nil {

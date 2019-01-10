@@ -1,0 +1,4 @@
+{
+    "type": "stateUpdate",
+    "data": "{\"users\":[{\"name\":\"\",\"id\":\"gvb7b6i231s0lu70qrgb\",\"snakeid\":\"gr4dbub231s0lu70qrgb\",\"score\":0}],\"snakes\":[{\"id\":\"gr4dbub231s0lu70qrgb\",\"userid\":\"gvb7b6i231s0lu70qrgb\",\"color\":8,\"bgcolor\":5,\"headrune\":128128,\"leftrune\":40,\"rightrune\":41,\"body\":[{\"x\":14,\"y\":21},{\"x\":13,\"y\":21},{\"x\":12,\"y\":21}],\"direction\":{\"vx\":1,\"vy\":0},\"nextdirection\":{\"vx\":1,\"vy\":0},\"targetlength\":3,\"speed\":4,\"stepsize\":4,\"Alive\":true}],\"foods\":[{\"id\":\"0s4dbub231s0lu70qrgb\",\"pos\":{\"x\":7,\"y\":4},\"type\":{\"color\":0,\"bgcolor\":0,\"leftrune\":127822,\"rightrune\":32,\"score\":1,\"lengthmodifier\":1,\"speedmodifier\":0}}],\"level\":{\"width\":25,\"height\":25,\"bgcolor\":0},\"scene\":\"game\",\"textbox\":null,\"maxscore\":10}"
+}

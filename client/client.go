@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	"net/url"
+
 	"os"
 	"strings"
 	"sync"
@@ -92,6 +92,8 @@ func Run() {
 	}
 	termboxOpen = true
 
+	// snake := getUserSnake()
+
 	log.Info("Starting WebSocket Controller...")
 	go ws.startReader()
 	go ws.startWriter()
@@ -124,19 +126,27 @@ mainLoop:
 
 }
 
+func getURL() string {
+	url := viper.GetString("SNAKE_URL")
+	prefix := "ws://"
+	if strings.HasPrefix(url, "http://") {
+		url = strings.TrimPrefix(url, "http://")
+	}
+	if strings.HasPrefix(url, "https://") {
+		url = strings.TrimPrefix(url, "https://")
+		prefix = "wss://"
+	}
+	return fmt.Sprintf("%s%s/hub?clientid=%s&snakesecret=%s", prefix, url, clientID, viper.GetString("SNAKE_SECRET"))
+}
+
 func getConn() error {
 	// Get the URL of Snake-hub server, send client ID and Snake Secret as query string
-	u := url.URL{
-		Scheme:   "ws",
-		Host:     viper.GetString("SNAKE_URL"),
-		Path:     "/hub",
-		RawQuery: fmt.Sprintf("clientid=%s&snakesecret=%s", clientID, viper.Get("SNAKE_SECRET")),
-	}
-	wsURL := u.String()
+	wsURL := getURL()
 
 	log.WithField("Connection string", wsURL).Info("Connecting to WebSocket server")
 
 	wsConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+
 	if err != nil {
 		return errors.Wrapf(err, "Cannot dial %s", wsURL)
 	}
@@ -151,7 +161,7 @@ func login() error {
 	log.WithField("Client ID", clientID).Info("Joining game with client ID")
 	msg := modell.ClientMsg{
 		ClientID: clientID,
-		Type:     "handshake",
+		Type:     "login",
 		Data:     viper.GetString("SNAKE_SECRET"),
 	}
 	if err := conn.WriteJSON(msg); err != nil {
@@ -163,7 +173,7 @@ func login() error {
 		return errors.Wrap(err, "Cannot read from WebSocket")
 	}
 
-	log.WithField("Server Msg", resp).Info("Hanshake response")
+	log.WithField("Server Msg", resp).Info("Login response")
 
 	if strings.Contains(resp.Data, "Server is full") {
 		return errors.New(resp.Data)
