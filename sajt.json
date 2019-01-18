@@ -1,4 +1,46 @@
 {
-    "type": "stateUpdate",
-    "data": "{\"users\":[{\"name\":\"\",\"id\":\"gvb7b6i231s0lu70qrgb\",\"snakeid\":\"gr4dbub231s0lu70qrgb\",\"score\":0}],\"snakes\":[{\"id\":\"gr4dbub231s0lu70qrgb\",\"userid\":\"gvb7b6i231s0lu70qrgb\",\"color\":8,\"bgcolor\":5,\"headrune\":128128,\"leftrune\":40,\"rightrune\":41,\"body\":[{\"x\":14,\"y\":21},{\"x\":13,\"y\":21},{\"x\":12,\"y\":21}],\"direction\":{\"vx\":1,\"vy\":0},\"nextdirection\":{\"vx\":1,\"vy\":0},\"targetlength\":3,\"speed\":4,\"stepsize\":4,\"Alive\":true}],\"foods\":[{\"id\":\"0s4dbub231s0lu70qrgb\",\"pos\":{\"x\":7,\"y\":4},\"type\":{\"color\":0,\"bgcolor\":0,\"leftrune\":127822,\"rightrune\":32,\"score\":1,\"lengthmodifier\":1,\"speedmodifier\":0}}],\"level\":{\"width\":25,\"height\":25,\"bgcolor\":0},\"scene\":\"game\",\"textbox\":null,\"maxscore\":10}"
+    "id": 10855535,
+    "status": 2,
+    "created_at": "2019-01-11T04:00:46.508Z",
+    "updated_at": "2019-01-11T04:09:27.248Z",
+    "hash_end": null,
+    "build_started": "2019-01-11T04:00:46.508Z",
+    "build_finished": "2019-01-11T04:09:27.000Z",
+    "slug": "93b176929acff51e",
+    "build_started_on_worker": "2019-01-11T04:00:47.000Z",
+    "abort_reason": null,
+    "on_hold_build_params": null,
+    "branch": "master",
+    "commit_message": "=\u003e Release Train #ALPHA",
+    "user_id": null,
+    "api_token": null,
+    "original_build_params": {
+        "branch": "master",
+        "commit_message": "=\u003e Release Train #ALPHA",
+        "workflow_id": "release-train-alpha"
+    },
+    "pull_request_id": 0,
+    "environment_prepared_at": "2019-01-11T04:00:47.000Z",
+    "environment_prepare_started_at": "2019-01-11T04:00:47.000Z",
+    "xamarin_machine_info": null,
+    "triggered_workflow": "release-train-alpha",
+    "organization_id": 18,
+    "metadata": {
+        "den_tags": [
+            "--linux-docker-android-lts",
+            "--standard1"
+        ],
+        "use_staging_den": false
+    },
+    "branch_dest": "master",
+    "pull_request_repository_url": null,
+    "pull_request_merge_branch": null,
+    "tag": null,
+    "pull_request_head_branch": null,
+    "stack_identifier": "linux-docker-android-lts",
+    "stack_config_type": "standard1",
+    "triggered_by": "schedule",
+    "is_status_sent": false,
+    "task_identifier": "46edbdb7-62f8-43b8-91c5-63bcebf61a42",
+    "repository_id": 19608
 }
