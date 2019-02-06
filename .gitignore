@@ -1,2 +1,4 @@
 snake-hub-client.log
 snake-hub-server.log
+.vscode
+www/node-modules

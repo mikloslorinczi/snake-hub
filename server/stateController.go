@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"sync"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
 	log "github.com/sirupsen/logrus"
@@ -120,7 +121,10 @@ func (sc *stateController) updateScene() {
 		}
 	case "scores":
 		{
-			if sc.nextRound.Before(time.Now()) {
+			now := time.Now()
+			sc.state.ScoresToTextbox()
+			sc.state.Textbox = append(sc.state.Textbox, fmt.Sprintf("Next round in ... %s", sc.nextRound.Sub(now)))
+			if sc.nextRound.Before(now) {
 				log.Info("Score viewing time has passed, back to waiting...")
 				sc.state.Scene = "wait"
 				return
@@ -135,7 +139,6 @@ func (sc *stateController) updateScene() {
 			}
 			if id := sc.state.GetWinner(); id != "" {
 				log.WithField("User ID", id).Info("A Player has won the game!")
-				sc.state.ScoresToTextbox()
 				sc.state.Scene = "scores"
 				sc.nextRound = time.Now().Add(time.Second * 10)
 				return

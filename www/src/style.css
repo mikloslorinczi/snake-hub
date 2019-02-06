@@ -1,0 +1,117 @@
+body {
+  display: block;
+  box-sizing: border-box;
+  background-color: rgb(0, 0, 0);
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+#gameScene {
+  box-sizing: border-box;
+  width: 99vw;
+  height: 100vw;
+  max-width: 800px;
+  max-height: 800px;
+  margin: 0 auto;
+  margin-top: 5px;
+  border: 2px solid rgb(34, 204, 19);
+  border-radius: 5px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+#messageBox, #loginMenu{
+  position: fixed;
+  top: 10%;
+  left: 25%;
+  width: 50%;
+  border: 2px solid rgb(34, 204, 19);
+  color: #d4f1d4;
+  border-radius: 5px;
+}
+
+#messageBox p {
+  text-align: unset;
+  font-size: 3vw;
+  margin: 5px
+}
+
+/* #loginMenu {
+
+} */
+
+div.food {
+  transform: scale(1.5);
+  width: 100%;
+  height: 100%;
+  color: white;
+  display: flex;
+  justify-content: center;
+  background: "";
+  mix-blend-mode: difference;
+  text-shadow: -.1px 2px 0px #ec7070,
+                 -.2px 4px 0px #78dae7,
+                 -.3px 6px 0px #7eec83;
+}
+
+div.food.head {
+  transform: scale(2);
+  mix-blend-mode: exclusion;
+  text-shadow: none;
+}
+
+div.food.snake {
+  width: 125%;
+  height: 125%;
+  text-shadow: none;
+}
+
+p {
+  margin: 0;
+  font-size: 5px;
+  font-size: 1.8vw;
+  align-self: center;
+  text-align: center;
+  justify-self: center;
+  width: 100%
+}
+
+/* .cell {
+  background: rgb(0, 0, 0);
+  transition: background-color .5s ease-in-out, border-radius .3s ease-out, opacity 1s ease-out, transform .3s linear;
+  display: flex;
+  mix-blend-mode: color-burn
+} */
+
+.snake {
+  mix-blend-mode: normal;
+  display: flex;
+  border-radius: 25%;
+  transform: scale(1.15);
+  transition: all .3s ease-in-out;
+  z-index: 5;
+  opacity: .3;
+  transition: opacity 5s ease, transform .3s linear;
+}
+
+.head {
+  z-index: 6;
+  mix-blend-mode: normal;
+  transform: scale(1.5);
+  transition: none;
+  opacity: 1;
+  animation: .5s morph ease-in infinite;
+  -moz-box-shadow: 0 0 5PX #000000;
+  -webkit-box-shadow: 0 0 5PX #000000;
+  box-shadow: 0 0 5PX #000000;
+}
+
+@keyframes morph {
+  0%, 100% {
+    border-radius: 5% 7% 7% 5% / 7% 15% 7% 15%;
+  }
+  50% {
+    border-radius: 45%;
+  }
+}

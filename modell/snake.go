@@ -130,6 +130,8 @@ func (snake *Snake) Update(lvl LevelMap) {
 
 		head := snake.GetHeadCoords()
 
+		snake.Direction = snake.NextDirection
+
 		newCoords := lvl.GetCoords(head.X+snake.Direction.VX, head.Y+snake.Direction.VY)
 
 		if len(snake.Body) < snake.TargetLength { // If the snake is still growing, just append the body
@@ -137,8 +139,6 @@ func (snake *Snake) Update(lvl LevelMap) {
 		} else {
 			snake.Body = append([]Coords{newCoords}, snake.Body[:len(snake.Body)-1]...) // If it reached the target length, cut the last block
 		}
-
-		snake.Direction = snake.NextDirection
 
 	}
 }

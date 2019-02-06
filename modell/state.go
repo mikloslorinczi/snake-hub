@@ -136,11 +136,16 @@ func (s *State) GetNewSnake(userID string) *Snake {
 
 	leftRune, rightRune := GetRandomTexture()
 
+	bgColor := termbox.Attribute(rand.Int()%8) + 1
+	for bgColor == termbox.ColorDefault || bgColor == termbox.ColorBlack {
+		bgColor = termbox.Attribute(rand.Int()%8) + 1
+	}
+
 	snake := &Snake{
 		ID:            utils.NewID(),
 		UserID:        userID,
 		Color:         termbox.Attribute(rand.Int()%8) + 1,
-		BgColor:       termbox.Attribute(rand.Int()%8) + 1,
+		BgColor:       bgColor,
 		HeadRune:      GetRandomHead(),
 		LeftRune:      leftRune,
 		RightRune:     rightRune,

@@ -126,22 +126,9 @@ mainLoop:
 
 }
 
-func getURL() string {
-	url := viper.GetString("SNAKE_URL")
-	prefix := "ws://"
-	if strings.HasPrefix(url, "http://") {
-		url = strings.TrimPrefix(url, "http://")
-	}
-	if strings.HasPrefix(url, "https://") {
-		url = strings.TrimPrefix(url, "https://")
-		prefix = "wss://"
-	}
-	return fmt.Sprintf("%s%s/hub?clientid=%s&snakesecret=%s", prefix, url, clientID, viper.GetString("SNAKE_SECRET"))
-}
-
 func getConn() error {
 	// Get the URL of Snake-hub server, send client ID and Snake Secret as query string
-	wsURL := getURL()
+	wsURL := utils.GetWSURL(viper.GetString("SNAKE_URL"), clientID, viper.GetString("SNAKE_SECRET"))
 
 	log.WithField("Connection string", wsURL).Info("Connecting to WebSocket server")
 

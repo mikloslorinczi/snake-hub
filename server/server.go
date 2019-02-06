@@ -4,11 +4,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	termbox "github.com/nsf/termbox-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
+	"github.com/mikloslorinczi/snake-hub/utils"
 
 	"github.com/spf13/viper"
 )
@@ -62,21 +64,27 @@ func Run() {
 
 	go gameState.updateAndBroadcast()
 
-	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("www"))))
-
-	// http.HandleFunc("/", http.StripPrefix("/", http.FileServer(http.Dir(viper.GetString("www")))))
+	if strings.HasPrefix(strings.ToUpper(viper.GetString("SNAKE_ENV")), "DEV") {
+		http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("www"))))
+	} else {
+		http.HandleFunc("/", home)
+	}
 
 	http.HandleFunc("/hub", hub)
 
 	log.WithFields(log.Fields{
-		"PORT":       viper.GetInt("SNAKE_PORT"),
-		"Secret":     viper.GetString("SNAKE_SECRET"),
-		"Max Score":  viper.GetInt("SNAKE_MAX_SCORE"),
-		"Min Player": viper.GetInt("SNAKE_MIN_PLAYER"),
-		"Max Player": viper.GetInt("SNAKE_MAX_PLAYER"),
-		"Map Width":  viper.GetInt("SNAKE_MAP_WIDTH"),
-		"Map Height": viper.GetInt("SNAKE_MAP_HEIGHT"),
-	}).Info("Snake-hub Server listening")
+		"ENV":              viper.GetString("SNAKE_ENV"),
+		"Development Mode": strings.HasPrefix(strings.ToUpper(viper.GetString("SNAKE_ENV")), "DEV"),
+		"PORT":             viper.GetInt("SNAKE_PORT"),
+		"URL":              viper.GetString("SNAKE_URP"),
+		"WS URL":           utils.GetWSURL(viper.GetString("SNAKE_URL"), "Client ID", viper.GetString("SNAKE_SECRET")),
+		"Secret":           viper.GetString("SNAKE_SECRET"),
+		"Max Score":        viper.GetInt("SNAKE_MAX_SCORE"),
+		"Min Player":       viper.GetInt("SNAKE_MIN_PLAYER"),
+		"Max Player":       viper.GetInt("SNAKE_MAX_PLAYER"),
+		"Map Width":        viper.GetInt("SNAKE_MAP_WIDTH"),
+		"Map Height":       viper.GetInt("SNAKE_MAP_HEIGHT"),
+	}).Info("Snake-hub Server has been started")
 
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(viper.GetInt("SNAKE_PORT")), nil))
 

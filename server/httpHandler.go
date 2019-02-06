@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/mikloslorinczi/snake-hub/template"
+	"github.com/mikloslorinczi/snake-hub/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -65,6 +67,5 @@ func auth(req *http.Request) (string, error) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "www/home.html")
-	// template.Home.Execute(w, "")
+	template.Home.Execute(w, utils.GetWSURL(viper.GetString("SNAKE_URL"), "client-id-goes-here", viper.GetString("SNAKE_SECRET")))
 }
