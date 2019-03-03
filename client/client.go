@@ -2,70 +2,139 @@ package client
 
 import (
 	"fmt"
-
 	"os"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
-	termbox "github.com/nsf/termbox-go"
+	"github.com/nsf/termbox-go"
+	"github.com/pkg/errors"
+
+	"github.com/mikloslorinczi/snake-hub/utils"
+	"github.com/mikloslorinczi/snake-hub/validator"
+	"github.com/spf13/viper"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/viper"
-
 	"github.com/mikloslorinczi/snake-hub/modell"
-	"github.com/mikloslorinczi/snake-hub/utils"
 )
 
-var (
-	clientID    = utils.NewID()
-	conn        *websocket.Conn
-	connMutex   sync.RWMutex
-	connOpen    = false
-	termboxOpen = false
+type app struct {
+	clientID string
+	username string
 
-	exitChan      = make(chan struct{}, 1)
-	errorChan     = make(chan error, 10)
-	termChan      = make(chan string, 10)
-	serverMsgChan = make(chan modell.ServerMsg, 10)
-	clientMsgChan = make(chan modell.ClientMsg, 10)
+	keyCh       chan string
+	stateCh     chan string
+	errorCh     chan error
+	clientMsgCh chan modell.ClientMsg
+	exitCh      chan struct{}
 
-	ws = &wsController{
-		stopReader: exitChan,
-		stopWriter: exitChan,
+	ws    *wsController
+	term  *termController
+	state *stateController
+}
+
+// NewApp returns a pointer to an initialized app object with the given clientID
+func newApp(ID string) *app {
+	return &app{
+		clientID:    ID,
+		keyCh:       make(chan string, 8),
+		stateCh:     make(chan string, 8),
+		errorCh:     make(chan error, 1),
+		clientMsgCh: make(chan modell.ClientMsg, 8),
+		exitCh:      make(chan struct{}, 1),
 	}
+}
 
-	tc = &termboxController{
-		stopEventLoop: exitChan,
-		stopRender:    exitChan,
+// init ...
+func (a *app) init(username string) {
+
+	go a.errorReader()
+
+	a.ws = newWsController(a.clientID, a.clientMsgCh, a.stateCh, a.errorCh, a.exitCh)
+	a.ws.init(utils.GetWSURL(viper.GetString("SNAKE_URL"), a.clientID, viper.GetString("SNAKE_SECRET")))
+
+	a.term = newTermController(a.keyCh, a.errorCh, a.exitCh)
+	a.term.init()
+
+	a.state = newStateController(username, modell.SnakeStyle{
+		Color:     termbox.ColorCyan,
+		BgColor:   termbox.ColorWhite,
+		HeadRune:  '🤩',
+		LeftRune:  '(',
+		RightRune: ')',
+	}, a.stateCh, a.errorCh, a.exitCh)
+	a.state.init()
+
+}
+
+// errorReader will constantly read the error channel and call Exit accordingly
+func (a *app) errorReader() {
+	for {
+		select {
+		case <-a.exitCh:
+			return
+		case err := <-a.errorCh:
+			if strings.Contains(err.Error(), "Terminated by user") {
+				a.exit(err.Error(), 0)
+			} else {
+				a.exit(err.Error(), 1)
+			}
+		}
 	}
+}
 
-	state = &stateController{
-		loaded: false,
+// exit will log the exit message, close the exitCh channel,
+// close the Termbox controller, wait 200ms
+// and call os.exit with the given status code
+func (a *app) exit(msg string, statusCode int) {
+	close(a.exitCh)
+	time.Sleep(time.Millisecond * 100)
+	if statusCode == 0 {
+		log.Info(msg)
+	} else {
+		log.Error(msg)
 	}
-)
+	if a.term.isOpen() {
+		log.Info("Closing Termbox")
+		a.term.clear()
+		a.term.close()
+	}
+	time.Sleep(time.Millisecond * 100)
+	if statusCode > 0 {
+		fmt.Println("An error occured during execution, check snake-hub-client.log for more detail")
+	}
+	os.Exit(statusCode)
+}
 
-// Run starts the Client...
+func getUsername() string {
+	if confName := viper.GetString("SNAKE_USERNAME"); validator.ValidUsername(confName) {
+		return confName
+	}
+	for {
+		inputName, err := utils.GetInput("Enter your username (max 8 char) :")
+		if err != nil {
+			log.Fatalf("Error reading username %v", err)
+		}
+		if validator.ValidUsername(inputName) {
+			return inputName
+		}
+		fmt.Printf("Invalid user name %s\n", inputName)
+	}
+}
+
+// Run sets up and starts the client
 func Run() {
 
-	// Log formatter
-	customFormatter := &log.TextFormatter{
+	// Setup Logger
+	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: "2006-01-02 15:04:05",
 		FullTimestamp:   true,
-	}
-	log.SetFormatter(customFormatter)
-
-	// Log level
+	})
 	if viper.GetBool("SNAKE_DEBUG") {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-
-	// Log file
 	logFile, err := os.OpenFile("snake-hub-client.log", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
 	if err != nil {
 		log.Fatal(err)
@@ -73,139 +142,18 @@ func Run() {
 	defer logFile.Close()
 	log.SetOutput(logFile)
 
-	log.Info("Initializing Snake Client...")
-
-	log.Info("Connecting to Snake-Hub")
-	if err := getConn(); err != nil {
-		gracefulStop(fmt.Sprintf("Cannot connect to the Snake-hub server %s", err), 1)
-	}
-	connOpen = true
-
-	log.Info("Joining game...")
-	if err := login(); err != nil {
-		gracefulStop(fmt.Sprintf("Snake-hub refused the connection %s", err), 1)
-	}
-
-	log.Info("Initializeing TermBox...")
-	if err := termbox.Init(); err != nil {
-		gracefulStop(fmt.Sprintf("Termbox init error %v", err), 1)
-	}
-	termboxOpen = true
-
-	// snake := getUserSnake()
-
-	log.Info("Starting WebSocket Controller...")
-	go ws.startReader()
-	go ws.startWriter()
-
-	log.Info("Starting Termbox Controller...")
-	tc.getSize()
-	go tc.startEventloop()
-	go tc.startRenderer()
-
-	log.Info("Entering mainloop")
-	returnMsg := "gg bb"
-	returnCode := 0
-
-mainLoop:
+	// Initialize the Game
+	log.Info("Initializing Snake Client")
+	id := utils.NewID()
+	username := getUsername()
+	game := newApp(id)
+	game.init(username)
 	for {
 		select {
-		case err := <-errorChan:
-			log.WithField("Msg", err).Debug("Msg Received on errorChan")
-			errStr := fmt.Sprintf("Error : %s", err)
-			close(exitChan)
-			if !strings.Contains(errStr, "Terminated by user") {
-				returnCode = 1
+		case key := <-game.keyCh:
+			if key == "esc" {
+				game.errorCh <- errors.New("Terminated by user")
 			}
-			returnMsg = errStr
-			break mainLoop
 		}
 	}
-
-	gracefulStop(returnMsg, returnCode)
-
-}
-
-func getConn() error {
-	// Get the URL of Snake-hub server, send client ID and Snake Secret as query string
-	wsURL := utils.GetWSURL(viper.GetString("SNAKE_URL"), clientID, viper.GetString("SNAKE_SECRET"))
-
-	log.WithField("Connection string", wsURL).Info("Connecting to WebSocket server")
-
-	wsConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-
-	if err != nil {
-		return errors.Wrapf(err, "Cannot dial %s", wsURL)
-	}
-
-	conn = wsConn
-	return nil
-
-}
-
-func login() error {
-
-	log.WithField("Client ID", clientID).Info("Joining game with client ID")
-	msg := modell.ClientMsg{
-		ClientID: clientID,
-		Type:     "login",
-		Data:     viper.GetString("SNAKE_SECRET"),
-	}
-	if err := conn.WriteJSON(msg); err != nil {
-		return errors.Wrap(err, "Cannot write to WebSocket")
-	}
-
-	resp := modell.ServerMsg{}
-	if err := conn.ReadJSON(&resp); err != nil {
-		return errors.Wrap(err, "Cannot read from WebSocket")
-	}
-
-	log.WithField("Server Msg", resp).Info("Login response")
-
-	if strings.Contains(resp.Data, "Server is full") {
-		return errors.New(resp.Data)
-	}
-
-	return nil
-
-}
-
-// Log close message, stop WebSocket, stop Termbox, return status code
-func gracefulStop(msg string, returnCode int) {
-
-	log.Info(msg)
-
-	if termboxOpen {
-
-		log.Info("Closing Termbox...")
-		if err := termbox.Clear(termbox.ColorDefault, termbox.ColorDefault); err != nil {
-			log.WithField("Error", err).Error("Cannot clear Termbox")
-		}
-		termbox.Close()
-		time.Sleep(time.Second / 3)
-
-	}
-
-	if connOpen {
-
-		log.Info("Closing WebSocket Connection...")
-		if err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
-			log.WithField("Error", err).Error("Cannot send close message on WebSocket")
-		}
-		time.Sleep(time.Second / 3)
-
-		log.Info("Closing Websocket...")
-		if err := conn.Close(); err != nil {
-			log.WithField("Error", err).Error("Cannot close WebSocket connection properly")
-		}
-		time.Sleep(time.Second / 3)
-
-	}
-
-	if returnCode != 0 {
-		fmt.Printf("\nAn error occured during execution, check snake-hub-client.log for details\n")
-	}
-
-	os.Exit(returnCode)
-
 }

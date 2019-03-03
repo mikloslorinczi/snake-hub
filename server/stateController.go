@@ -84,9 +84,9 @@ func (sc *stateController) checkCollosions() {
 func (sc *stateController) removeDeadSnakes() {
 	for _, snake := range sc.state.Snakes {
 		if !snake.Alive {
-			id := snake.UserID
-			sc.state.RemoveSnake(id)
-			sc.state.AddSnake(*sc.state.GetNewSnake(id))
+			_, user := sc.state.GetUser(snake.UserID)
+			sc.state.RemoveSnake(user.ID)
+			sc.state.AddSnake(*sc.state.GetNewSnake(user.ID, user.SnakeStyle, 3+user.Score))
 		}
 	}
 }
@@ -111,7 +111,7 @@ func (sc *stateController) updateScene() {
 			sc.state.Textbox = []string{
 				"Snake Hub",
 				"",
-				"Waiting for more player to join...",
+				"Waiting for more player to join",
 				"",
 				fmt.Sprintf("Connected Players %d", len(sc.state.Users)),
 				"",
@@ -123,9 +123,9 @@ func (sc *stateController) updateScene() {
 		{
 			now := time.Now()
 			sc.state.ScoresToTextbox()
-			sc.state.Textbox = append(sc.state.Textbox, fmt.Sprintf("Next round in ... %s", sc.nextRound.Sub(now)))
+			sc.state.Textbox = append(sc.state.Textbox, fmt.Sprintf("Next round in  %s", sc.nextRound.Sub(now)))
 			if sc.nextRound.Before(now) {
-				log.Info("Score viewing time has passed, back to waiting...")
+				log.Info("Score viewing time has passed, back to waiting")
 				sc.state.Scene = "wait"
 				return
 			}
@@ -133,7 +133,7 @@ func (sc *stateController) updateScene() {
 	case "game":
 		{
 			if len(sc.state.Users) == 0 {
-				log.Info("All player left the game. Back to waiting...")
+				log.Info("All player left the game. Back to waiting")
 				sc.state.Scene = "wait"
 				return
 			}

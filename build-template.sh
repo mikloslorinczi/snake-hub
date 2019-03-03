@@ -24,12 +24,12 @@ var Home = template.Must(template.New("").Parse(\`
 </head>
 <body>
 <div class="container"></div>
-<script type="text/javascript">
-$js
-</script>
 <style>
 $css     
 </style>
+<script type="text/javascript">
+$js
+</script>
 </body>
 </html>
 \`))

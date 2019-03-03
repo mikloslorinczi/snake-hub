@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -9,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/mikloslorinczi/snake-hub/modell"
+	"github.com/mikloslorinczi/snake-hub/validator"
 )
 
 type clientController struct {
@@ -21,11 +23,11 @@ type clientController struct {
 
 func (client *clientController) init() {
 
-	log.WithField("User ID", client.userID).Debug("Inicializing client Controller...")
+	log.WithField("User ID", client.userID).Debug("Inicializing client Controller")
 
 	defer func() {
 		if err := client.conn.Close(); err != nil {
-			log.Error("Cannot close WebSocket properly %s\n", err)
+			log.WithField("Error", err).Error("Cannot close WebSocket properly")
 			client.clientErrChan <- err
 		}
 	}()
@@ -94,15 +96,24 @@ func (client *clientController) msgWriter() {
 		select {
 		case serverMsg := <-client.serverMsgChan:
 			{
-				// log.WithField("Msg", string(serverMsg.Data)).Debug("Server Msg")
-				client.conn.WriteJSON(serverMsg)
+				client.sendServerMsg(serverMsg.Type, serverMsg.Data)
 			}
 		case <-client.killChan:
 			{
-				log.WithField("User ID", client.userID).Debug("Stop writing server messages")
+				log.WithField("User ID", client.userID).Debug("Stop writing server messages onto the WebScoket")
 				return
 			}
 		}
+	}
+}
+
+func (client *clientController) sendServerMsg(msgType, msgData string) {
+	msg := modell.ServerMsg{
+		Type: msgType,
+		Data: msgData,
+	}
+	if err := client.conn.WriteJSON(msg); err != nil {
+		client.clientErrChan <- err
 	}
 }
 
@@ -115,31 +126,7 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 	switch {
 	case msg.Type == "login":
 		{
-			if len(gameState.state.Users) == viper.GetInt("SNAKE_MAX_PLAYER") {
-				resp := modell.ServerMsg{
-					Type: "login",
-					Data: fmt.Sprintf("Server is full (max player %d)", viper.GetInt("SNAKE_MAX_PLAYER")),
-				}
-				if err := client.conn.WriteJSON(resp); err != nil {
-					client.clientErrChan <- err
-				}
-				return
-			}
-			resp := modell.ServerMsg{
-				Type: "login",
-				Data: fmt.Sprintf("User successfully loged in with User ID %v", client.userID),
-			}
-			if err := client.conn.WriteJSON(resp); err != nil {
-				client.clientErrChan <- err
-				return
-			}
-			go func() {
-				gameState.mu.Lock()
-				defer gameState.mu.Unlock()
-				gameState.state.AddUser(modell.User{
-					ID: client.userID,
-				})
-			}()
+			client.handleLogin(msg)
 		}
 	case msg.Type == "control":
 		{
@@ -154,4 +141,33 @@ func (client *clientController) handleMsg(msg modell.ClientMsg) {
 			"Body":      msg.Data,
 		}).Warn("Unknown message type")
 	}
+}
+
+func (client *clientController) handleLogin(msg modell.ClientMsg) {
+	if len(gameState.state.Users) == viper.GetInt("SNAKE_MAX_PLAYER") {
+		client.sendServerMsg("login", fmt.Sprintf("Error: Server is full (max player %d)", viper.GetInt("SNAKE_MAX_PLAYER")))
+		return
+	}
+	if !validator.ValidLogin([]byte(msg.Data), client.userID) {
+		client.sendServerMsg("login", fmt.Sprintf("Error: Invalid login data %s", msg.Data))
+		return
+	}
+	userData := modell.LoginData{}
+	json.Unmarshal([]byte(msg.Data), &userData)
+	client.sendServerMsg("login", fmt.Sprintf("User successfully loged in with UserName: %s and UserID %s", userData.UserName, client.userID))
+
+	var loginData modell.LoginData
+	json.Unmarshal([]byte(msg.Data), &loginData)
+
+	go func(data modell.LoginData) {
+		gameState.mu.Lock()
+		defer gameState.mu.Unlock()
+		gameState.state.AddUser(modell.User{
+			Name:       data.UserName,
+			ID:         client.userID,
+			Score:      0,
+			SnakeStyle: data.SnakeStyle,
+		})
+	}(loginData)
+
 }

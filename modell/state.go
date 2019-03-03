@@ -46,9 +46,9 @@ func (s *State) GetUser(id string) (bool, *User) {
 }
 
 // GetSnake returns the user associated with the given ID
-func (s *State) GetSnake(userID string) (bool, *Snake) {
+func (s *State) GetSnake(id string) (bool, *Snake) {
 	for _, snake := range s.Snakes {
-		if snake.UserID == userID {
+		if snake.UserID == id {
 			return true, &snake
 		}
 	}
@@ -67,7 +67,7 @@ func (s *State) GetFood(id string) (bool, *Food) {
 
 // AddUser adds a new user to the game
 func (s *State) AddUser(user User) {
-	snake := s.GetNewSnake(user.ID)
+	snake := s.GetNewSnake(user.ID, user.SnakeStyle, 3)
 	user.SnakeID = snake.ID
 	s.Users = append(s.Users, user)
 	s.AddSnake(*snake)
@@ -122,7 +122,7 @@ func (s *State) RemoveFood(id string) bool {
 }
 
 // GetNewSnake generates a new snake, on a valid position, facing to a random direction
-func (s *State) GetNewSnake(userID string) *Snake {
+func (s *State) GetNewSnake(userID string, style SnakeStyle, target int) *Snake {
 
 	x, y := 0, 0
 	direction := Up
@@ -134,26 +134,15 @@ func (s *State) GetNewSnake(userID string) *Snake {
 		}
 	}
 
-	leftRune, rightRune := GetRandomTexture()
-
-	bgColor := termbox.Attribute(rand.Int()%8) + 1
-	for bgColor == termbox.ColorDefault || bgColor == termbox.ColorBlack {
-		bgColor = termbox.Attribute(rand.Int()%8) + 1
-	}
-
 	snake := &Snake{
 		ID:            utils.NewID(),
 		UserID:        userID,
-		Color:         termbox.Attribute(rand.Int()%8) + 1,
-		BgColor:       bgColor,
-		HeadRune:      GetRandomHead(),
-		LeftRune:      leftRune,
-		RightRune:     rightRune,
+		Style:         style,
 		Body:          ClaculateSnakeBody(x, y, 3, direction, s.Level),
 		Direction:     direction,
 		NextDirection: direction,
-		TargetLength:  3,
-		Speed:         rand.Intn(6) + 1,
+		TargetLength:  target,
+		Speed:         3,
 		StepSize:      0,
 		Alive:         true,
 	}
@@ -288,8 +277,8 @@ func (s *State) NewRound() {
 		s.Users[i].Score = 0
 		s.RemoveSnake(s.Users[i].ID)
 	}
-	for i := range s.Users {
-		snake := s.GetNewSnake(s.Users[i].ID)
+	for i, user := range s.Users {
+		snake := s.GetNewSnake(user.ID, user.SnakeStyle, 3)
 		s.Users[i].SnakeID = snake.ID
 		s.AddSnake(*snake)
 	}

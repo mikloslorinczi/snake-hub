@@ -16,20 +16,26 @@ type Direction struct {
 
 // Snake represents a snake-object
 type Snake struct {
-	ID            string            `json:"id"`
-	UserID        string            `json:"userid"`
-	Color         termbox.Attribute `json:"color"`
-	BgColor       termbox.Attribute `json:"bgcolor"`
-	HeadRune      rune              `json:"headrune"`
-	LeftRune      rune              `json:"leftrune"`
-	RightRune     rune              `json:"rightrune"`
-	Body          []Coords          `json:"body"`
-	Direction     Direction         `json:"direction"`
-	NextDirection Direction         `json:"nextdirection"`
-	TargetLength  int               `json:"targetlength"`
-	Speed         int               `json:"speed"`
-	StepSize      int               `json:"stepsize"`
-	Alive         bool              `josn:"alive"`
+	ID            string     `json:"id"`
+	UserID        string     `json:"userid"`
+	Style         SnakeStyle `json:"style"`
+	Body          []Coords   `json:"body"`
+	Direction     Direction  `json:"direction"`
+	NextDirection Direction  `json:"nextdirection"`
+	TargetLength  int        `json:"targetlength"`
+	Speed         int        `json:"speed"`
+	StepSize      int        `json:"stepsize"`
+	Alive         bool       `josn:"alive"`
+}
+
+// SnakeStyle is the color and rune information of a snake's
+// color, background-color, head and texture runes
+type SnakeStyle struct {
+	Color     termbox.Attribute `json:"color"`
+	BgColor   termbox.Attribute `json:"bgcolor"`
+	HeadRune  rune              `json:"headrune"`
+	LeftRune  rune              `json:"leftrune"`
+	RightRune rune              `json:"rightrune"`
 }
 
 type snakeTexture struct {
@@ -111,7 +117,7 @@ func (current Direction) Opposite() Direction {
 	return current
 }
 
-// GetHeadCoords return the Coords of the first (0th) element of the body
+// GetHeadCoords return the Coords of the first (index 0) element of the body
 func (snake *Snake) GetHeadCoords() Coords {
 	if len(snake.Body) > 0 {
 		return snake.Body[0]
@@ -119,7 +125,7 @@ func (snake *Snake) GetHeadCoords() Coords {
 	return Coords{}
 }
 
-// Update moves the snake, and changes direction to nextDirection
+// Update moves the snake in the nextDirection and then changes direction to nextDirection
 func (snake *Snake) Update(lvl LevelMap) {
 
 	snake.StepSize += snake.Speed

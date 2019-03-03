@@ -12,3 +12,9 @@ type ClientMsg struct {
 	Type     string `json:"type"`
 	Data     string `json:"data"`
 }
+
+// LoginData sent by the client as ClientMsg.Data when logging in
+type LoginData struct {
+	UserName   string     `json:"username"`
+	SnakeStyle SnakeStyle `json:"snakestyle"`
+}

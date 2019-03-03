@@ -24,6 +24,12 @@ func init() {
 	RootCmd.AddCommand(joinCmd)
 	joinCmd.Flags().StringP("url", "u", "localhost:4545", "Snake-hub URL")
 	if err := viper.BindPFlag("SNAKE_URL", joinCmd.Flags().Lookup("url")); err != nil {
-		fmt.Printf("Cannot bind flag SNAKE_URL %v\n", err)
+		fmt.Printf("Cannot bind flag url %v\n", err)
 	}
+
+	joinCmd.Flags().StringP("name", "n", "", "Your name (max 8 character)")
+	if err := viper.BindPFlag("SNAKE_USERNAME", joinCmd.Flags().Lookup("name")); err != nil {
+		fmt.Printf("Cannot bind flag name %v\n", err)
+	}
+
 }
