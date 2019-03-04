@@ -20,7 +20,7 @@ type termController struct {
 	open       bool
 }
 
-// newTermController returns a pointer to a new termController struct
+// newTermController returns a pointer to a new un-initialized termController struct
 func newTermController(keyCh chan string, errorCh chan error, stopCh chan struct{}) *termController {
 	return &termController{
 		eventQueue: make(chan termbox.Event, 16),
@@ -33,8 +33,9 @@ func newTermController(keyCh chan string, errorCh chan error, stopCh chan struct
 
 // init sets up the termController and starts Termbox
 func (term *termController) init() {
+	log.Debug("Initializing Termbox")
 	if err := termbox.Init(); err != nil {
-		term.errorCh <- errors.Wrap(err, "Cannot init Termbox")
+		term.errorCh <- errors.Wrap(err, "Cannot initialize Termbox")
 		return
 	}
 	termbox.SetInputMode(termbox.InputEsc)

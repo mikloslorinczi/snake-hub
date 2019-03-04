@@ -13,26 +13,21 @@ import (
 // stateController manages the client-side game-state and userinfo,
 // behind a mutex making it thread-safe
 type stateController struct {
-	userName       string
-	userSnakestyle modell.SnakeStyle
-	stateCh        chan string
-	errorCh        chan error
-	stopCh         chan struct{}
-
-	state  *modell.State
-	mu     sync.RWMutex
-	loaded bool
-	setup  bool
+	stateCh chan string
+	errorCh chan error
+	stopCh  chan struct{}
+	state   *modell.State
+	mu      sync.RWMutex
+	loaded  bool
 }
 
-// newStateController returns a pointer to a stateController loaded with username and snake-style
-func newStateController(UserName string, SnakeStyle modell.SnakeStyle, StateCh chan string, ErrorCh chan error, StopCh chan struct{}) *stateController {
+// newStateController returns a pointer to a un-initialized stateController
+func newStateController(StateCh chan string, ErrorCh chan error, StopCh chan struct{}) *stateController {
 	return &stateController{
-		userName:       UserName,
-		userSnakestyle: SnakeStyle,
-		stateCh:        StateCh,
-		errorCh:        ErrorCh,
-		stopCh:         StopCh,
+		stateCh: StateCh,
+		errorCh: ErrorCh,
+		stopCh:  StopCh,
+		loaded:  false,
 	}
 }
 
@@ -51,6 +46,7 @@ func (st *stateController) stateReader() {
 			if err := st.loadState([]byte(state)); err != nil {
 				st.errorCh <- errors.Wrap(err, "Cannot load state")
 			}
+			st.loaded = true
 		}
 	}
 }
